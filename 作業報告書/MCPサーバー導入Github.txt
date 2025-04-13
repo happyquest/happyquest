@@ -1,0 +1,102 @@
+# GitHub MCPサーバー導入手順書
+
+## 概要
+本手順書はCursor IDEにおけるModel Context Protocol (MCP) GitHub サーバーの導入方法について説明します。MCPサーバーを使用することで、GitHub APIとの連携が可能になり、リポジトリの検索、ファイル操作、イシュー管理などの機能をCursorのAIエージェントから利用できるようになります。
+
+## 前提条件
+- Node.js（v18以上）がインストールされていること
+- npmがインストールされていること
+- GitHubアカウントを持っていること
+- GitHub Personal Access Token (PAT)を取得していること
+
+## 導入手順
+
+### 1. パッケージのインストール
+
+```bash
+# @modelcontextprotocol/server-github パッケージをグローバルにインストール
+npm install -g @modelcontextprotocol/server-github
+
+# または、プロジェクト内にインストール
+npm install @modelcontextprotocol/server-github
+```
+
+### 2. GitHub Personal Access Tokenの取得
+
+1. GitHubにログインします
+2. 右上のプロフィールアイコンをクリックして「Settings」を選択
+3. 左サイドバーの「Developer settings」をクリック
+4. 「Personal access tokens」→「Tokens (classic)」をクリック
+5. 「Generate new token」をクリック
+6. トークンの説明を入力（例: "MCP Server Token"）
+7. 以下のスコープを選択:
+   - repo（全て）
+   - workflow
+   - read:org
+   - read:user
+8. 「Generate token」をクリックしてトークンを生成
+9. 生成されたトークンを安全な場所にコピー（この画面を閉じると二度と表示されないので注意）
+
+### 3. MCPサーバーの起動
+
+```bash
+# 基本的な起動方法
+npx @modelcontextprotocol/server-github --port 4001 --token YOUR_GITHUB_TOKEN
+
+# 具体例
+npx @modelcontextprotocol/server-github --port 4001 --token cGJkc2M2ZnJqcnJ0YmM1YnE1MjlmYms5ZHI6ZTM3YjJkMjctMmE3Ni00Zjc1LWEyMzktN2U5ZThiYjBjODNj
+```
+
+### 4. Cursor IDEの設定
+
+1. Cursor IDEのプロジェクトルートに `.cursor` ディレクトリを作成
+2. `.cursor` ディレクトリ内に `mcp.json` ファイルを作成
+3. 以下の内容を `mcp.json` に追加:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "command",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-github", "--port", "4001", "--token", "YOUR_GITHUB_TOKEN"],
+      "disabled": false
+    }
+  }
+}
+```
+
+### 5. 動作確認
+
+1. MCPサーバーが正常に起動していることを確認
+   ```bash
+   ps aux | grep modelcontextprotocol
+   ```
+
+2. Cursor IDEを再起動し、Agent modeで以下のようなGitHub関連のコマンドを試す:
+   ```
+   リポジトリを検索して
+   ```
+
+## トラブルシューティング
+
+### サーバーが起動しない場合
+- ポート番号が他のアプリケーションと競合していないか確認
+- トークンが正しいか確認
+- Node.jsのバージョンが要件を満たしているか確認
+
+### 認証エラーが出る場合
+- GitHub PATが有効で、必要なスコープが付与されているか確認
+- トークンの形式が正しいか確認（余分な空白がないか）
+
+### その他の問題
+- コマンドの実行権限があるか確認
+- ファイアウォールの設定を確認
+- 最新バージョンのパッケージを使用しているか確認
+
+## 参考リンク
+- [Model Context Protocol GitHub](https://github.com/modelcontextprotocol/server-github)
+- [GitHub API Documentation](https://docs.github.com/en/rest)
+
+## 更新履歴
+- 2025-03-26: 初版作成 

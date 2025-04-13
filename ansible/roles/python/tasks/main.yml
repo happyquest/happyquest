@@ -1,0 +1,33 @@
+---
+- name: pyenvをインストール
+  shell: brew install pyenv
+  args:
+    creates: /home/linuxbrew/.linuxbrew/bin/pyenv
+
+- name: pyenvの環境変数を設定
+  blockinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    block: |
+      export PYENV_ROOT="$HOME/.pyenv"
+      command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+      eval "$(pyenv init -)"
+    create: yes
+
+- name: pyenvディレクトリを作成
+  file:
+    path: "{{ ansible_env.HOME }}/.pyenv"
+    state: directory
+    mode: '0755'
+
+- name: Python 3.12.9をインストール
+  shell: |
+    source ~/.bashrc
+    pyenv install 3.12.9
+    pyenv global 3.12.9
+  args:
+    creates: "{{ ansible_env.HOME }}/.pyenv/versions/3.12.9"
+
+- name: uvをインストール
+  shell: brew install uv
+  args:
+    creates: /home/linuxbrew/.linuxbrew/bin/uv 

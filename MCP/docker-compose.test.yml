@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  test-mongodb:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=test
+      - MONGO_INITDB_ROOT_PASSWORD=test
+    volumes:
+      - test_mongodb_data:/data/db
+
+  test-server:
+    build: .
+    environment:
+      - MONGODB_URI=mongodb://test:test@test-mongodb:27017/
+      - ENVIRONMENT=test
+      - JWT_SECRET=test-secret-key
+      - API_KEY=test-key
+    depends_on:
+      - test-mongodb
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./tests:/app/tests
+
+volumes:
+  test_mongodb_data: 

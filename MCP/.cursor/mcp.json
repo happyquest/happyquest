@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "type": "command",
+      "command": "env",
+      "args": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "--root",
+        "."
+      ],
+      "disabled": false
+    },
+    "github": {
+      "type": "command",
+      "command": "env",
+      "args": [
+        "GITHUB_TOKEN=${GITHUB_TOKEN}",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "disabled": false
+    },
+    "sequential": {
+      "type": "command",
+      "command": "env",
+      "args": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "disabled": false
+    }
+  }
+} 

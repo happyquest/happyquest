@@ -1,0 +1,36 @@
+---
+- name: VS Codeをインストール
+  apt:
+    name: code
+    state: present
+
+- name: 開発用ディレクトリを作成
+  file:
+    path: "{{ ansible_env.HOME }}/development"
+    state: directory
+    mode: '0755'
+
+- name: Gitの設定
+  git_config:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    scope: global
+  with_items:
+    - { name: "user.name", value: "{{ git_user_name }}" }
+    - { name: "user.email", value: "{{ git_user_email }}" }
+
+- name: SSHの設定
+  file:
+    path: "{{ ansible_env.HOME }}/.ssh"
+    state: directory
+    mode: '0700'
+
+- name: GitHubのSSHキーを設定
+  blockinfile:
+    path: "{{ ansible_env.HOME }}/.ssh/config"
+    block: |
+      Host github.com
+        User git
+        IdentityFile ~/.ssh/id_ed25519
+        IdentitiesOnly yes
+    create: yes 

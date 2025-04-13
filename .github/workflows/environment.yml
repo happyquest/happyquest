@@ -1,0 +1,21 @@
+name: Environment Setup Verification
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install Ansible
+        run: sudo apt-get install -y ansible
+      - name: Run playbook
+        run: cd ansible && ansible-playbook site.yml --check 
