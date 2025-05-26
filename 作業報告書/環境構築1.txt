@@ -1,0 +1,113 @@
+# HappyQuest 環境構築 議事録
+
+日時: 2025年3月24日
+目的: Ubuntu 22.04開発環境構築
+
+## 実行作業内容
+
+### 1. SSHの有効化
+```bash
+sudo apt install -y openssh-server
+sudo systemctl enable ssh
+sudo service ssh restart
+journalctl -xeu ssh.service
+```
+- SSHサーバーが正常にインストールされ、自動起動設定完了
+
+### 2. Dockerインストール
+```bash
+sudo apt update
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo usermod -aG docker $USER
+```
+- Dockerが正常にインストールされ、権限設定完了
+
+### 3. Homebrewインストール
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+sudo apt-get install -y build-essential
+```
+- Homebrewが正常にインストールされ、パスが設定された
+
+### 4. pyenvインストール
+```bash
+sudo apt install -y libsqlite3-dev tk-dev
+export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
+echo 'export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"' >> ~/.bashrc
+brew install pyenv
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+mkdir -p "$HOME/.pyenv"
+cp -r "$(brew --prefix pyenv)"/* "$HOME/.pyenv/"
+source ~/.bashrc
+```
+- pyenvが正常にインストールされ、設定が完了
+
+### 5&6. Python 3.12.9のインストール
+```bash
+sudo apt-get install -y libssl-dev libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev zlib1g-dev
+pyenv install 3.12.9
+pyenv global 3.12.9
+```
+- Python 3.12.9が正常にインストールされ、グローバルPythonとして設定された
+
+### 7. GitHub CLIのインストール
+```bash
+brew install gh
+```
+- GitHub CLI v2.69.0が正常にインストールされた
+
+### 8. uvツールのインストール
+```bash
+brew install uv
+```
+- uvパッケージマネージャー v0.6.9が正常にインストールされた
+
+### 9. nvmのインストール
+```bash
+brew install nvm
+mkdir ~/.nvm
+echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
+echo '[ -s "/home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh" ] && \. "/home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh"' >> ~/.bashrc
+echo '[ -s "/home/linuxbrew/.linuxbrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/home/linuxbrew/.linuxbrew/opt/nvm/etc/bash_completion.d/nvm"' >> ~/.bashrc
+source ~/.bashrc
+```
+- nvm v0.40.2が正常にインストールされた
+
+### 10. Node.jsのインストール
+```bash
+nvm install 23.8.0
+```
+- Node.js v23.8.0が正常にインストールされた
+- npm v10.9.2, npx v10.9.2も同時にインストールされた
+
+## 確認結果
+
+- すべてのツールとパッケージが正常にインストールされ、動作確認済み
+- 環境構築タスクはすべて完了
+
+## 自動化について
+
+環境構築を自動化するためのシェルスクリプトを作成しました。以下の特徴があります：
+
+1. エラーハンドリングと堅牢性
+   - エラー発生時の処理停止
+   - 未定義変数の使用防止
+   - 既存インストールの検出と再インストール回避
+
+2. ログ機能
+   - 日時付きのログメッセージで進捗と状態を記録
+   - ログファイルへの保存
+
+3. 環境変数の適切な設定
+   - .bashrcへの設定追加
+   - 現在のセッションへの環境変数適用
+
+シェルスクリプトの形式で提供することで、今後の環境構築作業を効率化できます。 

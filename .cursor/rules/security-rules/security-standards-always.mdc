@@ -1,5 +1,397 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# セキュリティ基準ルール
+
+## 🔐 機密情報管理
+
+### 1. 環境変数による管理
+```python
+# ✅ 正しい方法
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv('OPENAI_API_KEY')
+DATABASE_URL = os.getenv('DATABASE_URL')
+SECRET_KEY = os.getenv('SECRET_KEY')
+
+if not API_KEY:
+    raise ValueError("OPENAI_API_KEY environment variable is required")
+```
+
+```bash
+# .env ファイル例（.gitignoreに追加必須）
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxx
+DATABASE_URL=postgresql://user:pass@localhost:5432/db
+SECRET_KEY=your-secret-key-here
+GITHUB_TOKEN=ghp_xxxxxxxxxxxx
+```
+
+### 2. 禁止事項
+```python
+# ❌ 絶対禁止 - ハードコード
+API_KEY = "sk-proj-1234567890abcdef"  # 絶対NG
+DATABASE_PASSWORD = "mypassword123"   # 絶対NG
+
+# ❌ 絶対禁止 - ログ出力
+logger.info(f"API Key: {api_key}")    # 絶対NG
+print(f"Password: {password}")        # 絶対NG
+
+# ❌ 絶対禁止 - コメント内
+# API_KEY = "sk-proj-real-key-here"   # 絶対NG
+```
+
+## 🛡️ 入力値検証
+
+### 1. SQLインジェクション対策
+```python
+# ✅ 正しい方法 - パラメータ化クエリ
+def get_user_by_email(email: str):
+    query = "SELECT * FROM users WHERE email = %s"
+    cursor.execute(query, (email,))
+    return cursor.fetchone()
+
+# ❌ 危険 - 文字列結合
+def get_user_by_email_bad(email: str):
+    query = f"SELECT * FROM users WHERE email = '{email}'"  # SQLインジェクション脆弱性
+    cursor.execute(query)
+```
+
+### 2. XSS対策
+```python
+# ✅ 正しい方法 - エスケープ処理
+from html import escape
+from markupsafe import Markup
+
+def render_user_content(content: str):
+    escaped_content = escape(content)
+    return Markup(escaped_content)
+
+# ❌ 危険 - 生の出力
+def render_user_content_bad(content: str):
+    return content  # XSS脆弱性
+```
+
+### 3. 入力値バリデーション
+```python
+from pydantic import BaseModel, EmailStr, validator
+import re
+
+class UserRegistration(BaseModel):
+    email: EmailStr
+    password: str
+    username: str
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain lowercase letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain digit')
+        return v
+    
+    @validator('username')
+    def validate_username(cls, v):
+        if not re.match(r'^[a-zA-Z0-9_]{3,20}$', v):
+            raise ValueError('Username must be 3-20 alphanumeric characters')
+        return v
+```
+
+## 🔒 認証・認可
+
+### 1. JWT実装
+```python
+import jwt
+from datetime import datetime, timedelta
+from typing import Optional
+
+class JWTManager:
+    def __init__(self, secret_key: str):
+        self.secret_key = secret_key
+        self.algorithm = 'HS256'
+    
+    def create_token(self, user_id: int, expires_delta: Optional[timedelta] = None):
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(hours=24)
+        
+        payload = {
+            'user_id': user_id,
+            'exp': expire,
+            'iat': datetime.utcnow()
+        }
+        
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+    
+    def verify_token(self, token: str) -> Optional[dict]:
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            return payload
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None
+```
+
+### 2. パスワードハッシュ化
+```python
+import bcrypt
+from typing import str
+
+class PasswordManager:
+    @staticmethod
+    def hash_password(password: str) -> str:
+        """パスワードをハッシュ化"""
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+        return hashed.decode('utf-8')
+    
+    @staticmethod
+    def verify_password(password: str, hashed: str) -> bool:
+        """パスワードを検証"""
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+# ❌ 危険 - 平文保存
+def store_password_bad(password: str):
+    return password  # 絶対NG
+
+# ❌ 危険 - 弱いハッシュ
+import hashlib
+def weak_hash(password: str):
+    return hashlib.md5(password.encode()).hexdigest()  # 脆弱
+```
+
+## 🌐 API セキュリティ
+
+### 1. レート制限
+```python
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+@app.route('/api/login', methods=['POST'])
+@limiter.limit("5 per minute")
+def login():
+    # ログイン処理
+    pass
+```
+
+### 2. CORS設定
+```python
+from flask_cors import CORS
+
+# ✅ 正しい方法 - 制限的なCORS
+CORS(app, origins=[
+    "https://yourdomain.com",
+    "https://app.yourdomain.com"
+])
+
+# ❌ 危険 - 全許可
+CORS(app, origins="*")  # 本番環境では危険
+```
+
+### 3. HTTPSリダイレクト
+```python
+from flask_talisman import Talisman
+
+# HTTPS強制とセキュリティヘッダー
+Talisman(app, force_https=True)
+
+@app.before_request
+def force_https():
+    if not request.is_secure and app.env != 'development':
+        return redirect(request.url.replace('http://', 'https://'))
+```
+
+## 🔍 セキュリティスキャン
+
+### 1. 自動スキャンツール
+```bash
+# Python セキュリティスキャン
+bandit -r src/                    # セキュリティ脆弱性スキャン
+safety check                     # 依存関係脆弱性チェック
+pip-audit                        # パッケージ脆弱性監査
+
+# Node.js セキュリティスキャン
+npm audit                        # 依存関係脆弱性チェック
+npm audit fix                    # 自動修正
+yarn audit                       # Yarn版監査
+```
+
+### 2. GitHub Actions統合
+```yaml
+name: Security Scan
+
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Python Security Scan
+        run: |
+          pip install bandit safety
+          bandit -r src/ -f json -o bandit-report.json
+          safety check --json --output safety-report.json
+          
+      - name: Node.js Security Scan
+        run: |
+          npm audit --audit-level moderate
+          
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+```
+
+## 🗄️ データベースセキュリティ
+
+### 1. 接続セキュリティ
+```python
+# ✅ 正しい方法 - SSL接続
+DATABASE_URL = "postgresql://user:pass@host:5432/db?sslmode=require"
+
+# 接続プール設定
+from sqlalchemy import create_engine
+from sqlalchemy.pool import QueuePool
+
+engine = create_engine(
+    DATABASE_URL,
+    poolclass=QueuePool,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    connect_args={
+        "sslmode": "require",
+        "sslcert": "client-cert.pem",
+        "sslkey": "client-key.pem",
+        "sslrootcert": "ca-cert.pem"
+    }
+)
+```
+
+### 2. データ暗号化
+```python
+from cryptography.fernet import Fernet
+
+class DataEncryption:
+    def __init__(self, key: bytes):
+        self.cipher = Fernet(key)
+    
+    def encrypt(self, data: str) -> str:
+        """データを暗号化"""
+        return self.cipher.encrypt(data.encode()).decode()
+    
+    def decrypt(self, encrypted_data: str) -> str:
+        """データを復号化"""
+        return self.cipher.decrypt(encrypted_data.encode()).decode()
+
+# 暗号化キーの生成（一度だけ実行）
+# key = Fernet.generate_key()
+```
+
+## 🚨 インシデント対応
+
+### 1. セキュリティログ
+```python
+import logging
+from datetime import datetime
+
+security_logger = logging.getLogger('security')
+security_handler = logging.FileHandler('security.log')
+security_formatter = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s'
+)
+security_handler.setFormatter(security_formatter)
+security_logger.addHandler(security_handler)
+
+def log_security_event(event_type: str, user_id: int, details: dict):
+    """セキュリティイベントをログ記録"""
+    security_logger.warning(
+        f"SECURITY_EVENT: {event_type} - User: {user_id} - Details: {details}"
+    )
+
+# 使用例
+log_security_event("FAILED_LOGIN", user_id=123, details={
+    "ip_address": "192.168.1.100",
+    "user_agent": "Mozilla/5.0...",
+    "attempt_count": 3
+})
+```
+
+### 2. 異常検知
+```python
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+class SecurityMonitor:
+    def __init__(self):
+        self.failed_attempts = defaultdict(list)
+        self.max_attempts = 5
+        self.lockout_duration = timedelta(minutes=15)
+    
+    def record_failed_login(self, ip_address: str):
+        """ログイン失敗を記録"""
+        now = datetime.utcnow()
+        self.failed_attempts[ip_address].append(now)
+        
+        # 古い記録を削除
+        cutoff = now - self.lockout_duration
+        self.failed_attempts[ip_address] = [
+            attempt for attempt in self.failed_attempts[ip_address]
+            if attempt > cutoff
+        ]
+        
+        # 閾値チェック
+        if len(self.failed_attempts[ip_address]) >= self.max_attempts:
+            self.trigger_security_alert(ip_address)
+    
+    def trigger_security_alert(self, ip_address: str):
+        """セキュリティアラートを発生"""
+        log_security_event("BRUTE_FORCE_DETECTED", 0, {
+            "ip_address": ip_address,
+            "attempt_count": len(self.failed_attempts[ip_address])
+        })
+```
+
+## 📋 セキュリティチェックリスト
+
+### 開発時チェック
+- [ ] **機密情報**: ハードコードされた秘密情報がないか
+- [ ] **入力検証**: 全ての入力値が適切に検証されているか
+- [ ] **出力エスケープ**: XSS対策が実装されているか
+- [ ] **SQLインジェクション**: パラメータ化クエリを使用しているか
+- [ ] **認証**: 適切な認証メカニズムが実装されているか
+
+### デプロイ前チェック
+- [ ] **HTTPS**: 本番環境でHTTPS強制が有効か
+- [ ] **セキュリティヘッダー**: 適切なHTTPセキュリティヘッダーが設定されているか
+- [ ] **依存関係**: 脆弱性のある依存関係がないか
+- [ ] **ログ**: セキュリティイベントが適切にログ記録されているか
+- [ ] **バックアップ**: データベースの暗号化バックアップが設定されているか
+
+### 定期監査
+- [ ] **アクセス権限**: 不要なアクセス権限がないか
+- [ ] **パスワードポリシー**: 強力なパスワードポリシーが適用されているか
+- [ ] **セッション管理**: セッションタイムアウトが適切に設定されているか
+- [ ] **監査ログ**: セキュリティログが定期的にレビューされているか
+

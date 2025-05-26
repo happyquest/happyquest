@@ -1,5 +1,285 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# テスト駆動開発（TDD）ワークフロールール
+
+## 🔄 TDDサイクル（Red-Green-Refactor）
+
+### 1. 🔴 Red: テスト作成（失敗）
+```python
+# 例: 新機能のテストを先に作成
+def test_user_registration():
+    """ユーザー登録機能のテスト"""
+    user_service = UserService()
+    result = user_service.register_user(
+        email="test@example.com",
+        password="secure123",
+        username="testuser"
+    )
+    
+    assert result.success is True
+    assert result.user_id is not None
+    assert result.user.email == "test@example.com"
+```
+
+### 2. 🟢 Green: 最小実装（成功）
+```python
+# 例: テストを通すための最小実装
+class UserService:
+    def register_user(self, email: str, password: str, username: str):
+        # 最小限の実装でテストを通す
+        user = User(email=email, username=username)
+        user.id = generate_id()
+        return RegistrationResult(
+            success=True,
+            user_id=user.id,
+            user=user
+        )
+```
+
+### 3. 🔵 Refactor: リファクタリング（改善）
+```python
+# 例: コードの改善と最適化
+class UserService:
+    def __init__(self, user_repository: UserRepository):
+        self.user_repository = user_repository
+        self.validator = UserValidator()
+    
+    def register_user(self, email: str, password: str, username: str):
+        # バリデーション追加
+        self.validator.validate_email(email)
+        self.validator.validate_password(password)
+        
+        # 重複チェック
+        if self.user_repository.exists_by_email(email):
+            raise UserAlreadyExistsError(email)
+        
+        # ユーザー作成
+        user = User.create(email, password, username)
+        saved_user = self.user_repository.save(user)
+        
+        return RegistrationResult.success(saved_user)
+```
+
+## 📋 テスト作成ガイドライン
+
+### テストレベル定義
+- **単体テスト**: 関数・メソッドレベル（80%以上カバレッジ）
+- **結合テスト**: モジュール間連携（主要フロー100%）
+- **システムテスト**: E2Eシナリオ（重要機能100%）
+- **受入テスト**: ユーザー要件検証（全要件カバー）
+
+### テスト命名規則
+```python
+# パターン: test_[機能]_[条件]_[期待結果]
+def test_user_registration_with_valid_data_should_succeed():
+    pass
+
+def test_user_registration_with_duplicate_email_should_fail():
+    pass
+
+def test_user_registration_with_invalid_password_should_raise_error():
+    pass
+```
+
+### テストデータ管理
+```python
+# Fixtureを使用したテストデータ管理
+@pytest.fixture
+def valid_user_data():
+    return {
+        "email": "test@example.com",
+        "password": "SecurePass123!",
+        "username": "testuser"
+    }
+
+@pytest.fixture
+def user_service():
+    mock_repository = Mock(spec=UserRepository)
+    return UserService(mock_repository)
+```
+
+## 🎯 テスト対象境界
+
+### テスト対象
+- ✅ **ビジネスロジック**: 全ての業務ルール
+- ✅ **API エンドポイント**: 全てのHTTPエンドポイント
+- ✅ **データアクセス層**: CRUD操作
+- ✅ **バリデーション**: 入力値検証ロジック
+- ✅ **エラーハンドリング**: 例外処理
+
+### テスト対象外
+- ❌ **外部API**: モック・スタブで代替
+- ❌ **サードパーティライブラリ**: 既にテスト済み
+- ❌ **設定ファイル**: 静的な設定値
+- ❌ **ログ出力**: 副作用のみの処理
+
+## 🛠️ テストツール・フレームワーク
+
+### Python
+```bash
+# テストフレームワーク
+pytest                    # メインテストフレームワーク
+pytest-cov              # カバレッジ測定
+pytest-mock             # モック機能
+pytest-asyncio          # 非同期テスト
+
+# 品質チェック
+flake8                   # 静的解析
+mypy                     # 型チェック
+bandit                   # セキュリティチェック
+```
+
+### JavaScript/TypeScript
+```bash
+# テストフレームワーク
+jest                     # メインテストフレームワーク
+@testing-library/react   # React コンポーネントテスト
+supertest               # API テスト
+playwright              # E2E テスト
+
+# 品質チェック
+eslint                   # 静的解析
+typescript              # 型チェック
+```
+
+## 🔍 モック/スタブ使用方針
+
+### モック対象
+- 外部API呼び出し
+- データベース操作
+- ファイルシステム操作
+- 時間依存処理
+- ランダム値生成
+
+### モック実装例
+```python
+# データベースモック
+@pytest.fixture
+def mock_user_repository():
+    repository = Mock(spec=UserRepository)
+    repository.save.return_value = User(id=1, email="test@example.com")
+    repository.exists_by_email.return_value = False
+    return repository
+
+# 外部APIモック
+@pytest.fixture
+def mock_email_service():
+    service = Mock(spec=EmailService)
+    service.send_welcome_email.return_value = True
+    return service
+```
+
+## 📊 テストカバレッジ基準
+
+### カバレッジ目標
+- **全体**: 80%以上
+- **ビジネスロジック**: 95%以上
+- **API層**: 90%以上
+- **データアクセス層**: 85%以上
+
+### カバレッジ測定
+```bash
+# Python
+pytest --cov=src --cov-report=html --cov-fail-under=80
+
+# JavaScript
+npm test -- --coverage --coverageThreshold='{"global":{"branches":80,"functions":80,"lines":80,"statements":80}}'
+```
+
+## 🚀 CI/CD統合
+
+### GitHub Actions設定例
+```yaml
+name: TDD Workflow
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=src --cov-report=xml --cov-fail-under=80
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+```
+
+## 📝 テスト文書化
+
+### テスト仕様書テンプレート
+```markdown
+# テスト仕様書: ユーザー登録機能
+
+## テスト対象
+- 機能: ユーザー登録
+- モジュール: UserService
+- 責任者: 開発チーム
+
+## テストケース
+
+### TC001: 正常系 - 有効なデータでの登録
+- **前提条件**: 新規ユーザーデータ
+- **入力**: email, password, username
+- **期待結果**: 登録成功、ユーザーID返却
+
+### TC002: 異常系 - 重複メールアドレス
+- **前提条件**: 既存ユーザーと同じメール
+- **入力**: 重複email, password, username  
+- **期待結果**: UserAlreadyExistsError発生
+```
+
+## 🔄 継続的改善
+
+### テスト品質メトリクス
+- テスト実行時間
+- テスト成功率
+- カバレッジ推移
+- バグ検出率
+
+### 定期レビュー項目
+- [ ] テストケースの妥当性
+- [ ] モック使用の適切性
+- [ ] テストデータの管理
+- [ ] テスト実行速度の最適化
+
+## ⚡ パフォーマンステスト
+
+### 負荷テスト例
+```python
+import pytest
+import time
+
+def test_user_registration_performance():
+    """ユーザー登録のパフォーマンステスト"""
+    user_service = UserService()
+    
+    start_time = time.time()
+    result = user_service.register_user(
+        email="perf@test.com",
+        password="test123",
+        username="perfuser"
+    )
+    end_time = time.time()
+    
+    # 1秒以内に完了することを確認
+    assert (end_time - start_time) < 1.0
+    assert result.success is True
+```
+

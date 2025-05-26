@@ -1,0 +1,126 @@
+# Sequential Thinking MCPサーバー導入手順書
+
+## 概要
+本手順書はCursor IDEにおけるModel Context Protocol (MCP) Sequential Thinking サーバーの導入方法について説明します。このサーバーを使用することで、複雑な問題を段階的に考え、構造化された思考プロセスを通じて解決策を導く機能をCursorのAIエージェントが利用できるようになります。
+
+## 前提条件
+- Node.js（v18以上）がインストールされていること
+- npmがインストールされていること
+- Cursor IDE（0.46以降）がインストールされていること
+
+## 導入手順
+
+### 1. パッケージのインストール
+
+```bash
+# @modelcontextprotocol/server-sequential-thinking パッケージをグローバルにインストール
+npm install -g @modelcontextprotocol/server-sequential-thinking
+
+# または、プロジェクト内にインストール
+npm install @modelcontextprotocol/server-sequential-thinking
+```
+
+### 2. MCPサーバーの起動
+
+```bash
+# 基本的な起動方法
+npx @modelcontextprotocol/server-sequential-thinking --port 4002
+
+# デバッグモードで起動する場合
+NODE_ENV=development DEBUG=* npx @modelcontextprotocol/server-sequential-thinking --port 4002
+
+# バックグラウンドで実行する場合
+npx @modelcontextprotocol/server-sequential-thinking --port 4002 &
+```
+
+### 3. Cursor IDEの設定
+
+1. Cursor IDEのプロジェクトルートに `.cursor` ディレクトリを作成
+2. `.cursor` ディレクトリ内に `mcp.json` ファイルを作成
+3. 以下の内容を `mcp.json` に追加:
+
+```json
+{
+  "mcpServers": {
+    "sequential": {
+      "type": "command",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-sequential-thinking", "--port", "4002"],
+      "disabled": false
+    }
+  }
+}
+```
+
+注: 既に他のMCPサーバー設定がある場合は、"mcpServers"オブジェクト内に追加します。
+
+### 4. 動作確認
+
+1. MCPサーバーが正常に起動していることを確認
+   ```bash
+   ps aux | grep modelcontextprotocol
+   ```
+
+2. Cursor IDEを再起動し、Agent modeで以下のようなSequential Thinking関連のコマンドを試す:
+   ```
+   この問題を段階的に分析して解決策を提案してください：[問題の詳細]
+   ```
+
+## サーバーの機能と活用方法
+
+### 主な機能
+- 複雑な問題の段階的分析
+- 思考プロセスの構造化
+- 仮説の生成と検証
+- 解決策の段階的提案
+
+### 活用シナリオ
+1. プロジェクト計画の立案
+   ```
+   HappyQuestプロジェクトの開発計画を段階的に考えて
+   ```
+
+2. システム設計の検討
+   ```
+   RAGシステムのアーキテクチャを段階的に設計して
+   ```
+
+3. バグの原因分析
+   ```
+   このエラーログを分析して段階的に問題を特定して
+   ```
+
+4. アルゴリズムの設計
+   ```
+   効率的なデータ処理アルゴリズムを段階的に設計して
+   ```
+
+## トラブルシューティング
+
+### サーバーが起動しない場合
+- ポート番号が他のアプリケーションと競合していないか確認
+- Node.jsのバージョンが要件を満たしているか確認
+- パッケージが正しくインストールされているか確認
+
+### サーバーが応答しない場合
+- サーバープロセスが実行中か確認
+- メモリ使用量を確認
+- ログを確認して具体的なエラーを特定
+
+### その他の問題
+- コマンドの実行権限があるか確認
+- 最新バージョンのパッケージを使用しているか確認
+- Cursor IDEのバージョンを確認
+
+## ベストプラクティス
+- 一度に解決する問題の複雑さに制限を設ける
+- 思考ステップ数を適切に設定する（3〜7ステップが推奨）
+- 明確で具体的な問題記述を提供する
+- 複数の思考ブランチを活用して代替案を検討する
+
+## 参考リンク
+- [Model Context Protocol Sequential Thinking](https://github.com/modelcontextprotocol/server-sequential-thinking)
+- [Chain of Thought Prompting](https://arxiv.org/abs/2201.11903)
+
+## 更新履歴
+- 2025-03-26: 初版作成 

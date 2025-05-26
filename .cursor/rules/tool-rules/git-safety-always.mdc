@@ -1,5 +1,282 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# Git安全操作ルール
+
+## 🚫 使用禁止コマンド
+
+### 1. 履歴改変系（共有ブランチで絶対禁止）
+
+#### `git push --force` / `git push -f`
+```bash
+# ❌ 絶対禁止（mainブランチ）
+git push --force origin main
+git push -f origin develop
+
+# 理由:
+# - 他の開発者の作業を破壊
+# - 履歴の整合性が失われる
+# - CI/CDパイプラインが混乱
+# - レビュー履歴が失われる
+
+# ✅ 代替案
+git push --force-with-lease origin feature-branch  # フィーチャーブランチのみ
+```
+
+#### `git rebase` (共有ブランチで禁止)
+```bash
+# ❌ 共有ブランチで禁止
+git checkout main
+git rebase feature-branch
+
+# 理由:
+# - 履歴の線形化により、マージの文脈が失われる
+# - 他の開発者のローカル履歴と不整合
+# - Pull Requestの履歴が追跡困難
+
+# ✅ 代替案
+git merge --no-ff feature-branch  # マージコミットを明示的に作成
+```
+
+### 2. 直接操作系（保護ブランチで禁止）
+
+#### `git commit --amend` (プッシュ済み)
+```bash
+# ❌ プッシュ済みコミットで禁止
+git commit --amend -m "修正されたメッセージ"
+git push --force
+
+# 理由:
+# - コミットハッシュが変更される
+# - 他の開発者の参照が無効になる
+# - CI/CDの実行履歴と不整合
+
+# ✅ 代替案
+git commit -m "fix: 前回コミットの修正"  # 新しいコミットで修正
+```
+
+#### `git reset --hard` (共有ブランチで禁止)
+```bash
+# ❌ 共有ブランチで禁止
+git reset --hard HEAD~3
+git push --force
+
+# 理由:
+# - コミット履歴が完全に失われる
+# - 他の開発者の作業基盤が破壊
+# - 復旧が困難
+
+# ✅ 代替案
+git revert HEAD~2..HEAD  # リバートコミットで安全に取り消し
+```
+
+### 3. 危険な操作系
+
+#### `git clean -fd` (確認なし)
+```bash
+# ❌ 危険
+git clean -fd  # 未追跡ファイルを強制削除
+
+# 理由:
+# - 重要な作業ファイルが失われる
+# - 復旧不可能
+# - 設定ファイルや一時ファイルも削除
+
+# ✅ 代替案
+git clean -n   # まず確認
+git clean -i   # インタラクティブモード
+```
+
+## ✅ 推奨ワークフロー
+
+### 1. 安全な機能開発フロー
+```bash
+# 1. 最新の状態を取得
+git checkout main
+git pull origin main
+
+# 2. フィーチャーブランチ作成
+git checkout -b feature/user-authentication-123
+git push -u origin feature/user-authentication-123
+
+# 3. 定期的なコミット
+git add .
+git commit -m "feat: ユーザー認証機能の基本実装"
+git push origin feature/user-authentication-123
+
+# 4. Pull Request作成
+gh pr create --title "✨ ユーザー認証機能実装 #123" \
+             --body "Fixes #123"
+
+# 5. マージ後のクリーンアップ
+git checkout main
+git pull origin main
+git branch -d feature/user-authentication-123
+```
+
+### 2. 安全な修正フロー
+```bash
+# 1. ホットフィックスブランチ作成
+git checkout main
+git pull origin main
+git checkout -b hotfix/critical-security-fix-456
+
+# 2. 修正実装
+git add .
+git commit -m "fix: セキュリティ脆弱性の修正 #456"
+git push origin hotfix/critical-security-fix-456
+
+# 3. 緊急PR作成
+gh pr create --title "🚨 緊急修正: セキュリティ脆弱性 #456" \
+             --body "Critical security fix" \
+             --label "urgent,security"
+```
+
+## 🔒 ブランチ保護設定
+
+### GitHub Branch Protection Rules
+```yaml
+# .github/branch-protection.yml
+protection_rules:
+  main:
+    required_status_checks:
+      strict: true
+      contexts:
+        - "ci/tests"
+        - "ci/lint"
+        - "ci/security-scan"
+    enforce_admins: true
+    required_pull_request_reviews:
+      required_approving_review_count: 2
+      dismiss_stale_reviews: true
+      require_code_owner_reviews: true
+    restrictions:
+      users: []
+      teams: ["senior-developers"]
+    allow_force_pushes: false
+    allow_deletions: false
+```
+
+### Git Hooks設定
+```bash
+# .git/hooks/pre-push (実行可能にする)
+#!/bin/bash
+
+protected_branch='main'
+current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+
+if [ $protected_branch = $current_branch ]; then
+    echo "❌ Direct push to main branch is not allowed!"
+    echo "Please create a Pull Request instead."
+    exit 1
+fi
+```
+
+## 📋 必須確認事項
+
+### プッシュ前チェックリスト
+- [ ] **ブランチ確認**: 正しいブランチで作業しているか
+- [ ] **変更内容確認**: `git diff --staged` で変更を確認
+- [ ] **テスト実行**: ローカルでテストが通るか
+- [ ] **リンター実行**: コーディング規約に準拠しているか
+- [ ] **機密情報確認**: APIキーやパスワードが含まれていないか
+
+### マージ前チェックリスト
+- [ ] **レビュー承認**: 必要な承認を得ているか
+- [ ] **CI/CD成功**: 全ての自動チェックが通っているか
+- [ ] **コンフリクト解決**: マージコンフリクトが解決されているか
+- [ ] **ドキュメント更新**: 必要に応じてドキュメントを更新したか
+
+## 🛡️ 緊急時の復旧手順
+
+### 1. 誤ったforce pushの復旧
+```bash
+# 1. reflogで履歴確認
+git reflog
+
+# 2. 正しいコミットに戻す
+git reset --hard HEAD@{n}  # nは正しい状態の番号
+
+# 3. 強制プッシュで復旧（緊急時のみ）
+git push --force-with-lease origin main
+```
+
+### 2. 削除されたブランチの復旧
+```bash
+# 1. 削除されたブランチのコミットハッシュを確認
+git reflog --all | grep "branch-name"
+
+# 2. ブランチを復旧
+git checkout -b recovered-branch-name <commit-hash>
+
+# 3. リモートにプッシュ
+git push origin recovered-branch-name
+```
+
+### 3. 失われたコミットの復旧
+```bash
+# 1. 失われたコミットを検索
+git fsck --lost-found
+
+# 2. コミット内容を確認
+git show <commit-hash>
+
+# 3. 新しいブランチで復旧
+git checkout -b recovery-branch <commit-hash>
+```
+
+## 📊 Git操作監視
+
+### 危険な操作の検出
+```bash
+# .gitconfig に追加
+[alias]
+    # 安全なエイリアスのみ許可
+    safe-push = push --force-with-lease
+    safe-reset = reset --soft
+    safe-clean = clean -n
+    
+    # 危険な操作の警告
+    force-push = "!echo '❌ Use safe-push instead'; false"
+    hard-reset = "!echo '❌ Use safe-reset instead'; false"
+```
+
+### 操作ログの記録
+```bash
+# Git操作ログを記録するスクリプト
+#!/bin/bash
+# ~/.gitconfig の core.hooksPath で指定
+
+echo "$(date): $USER executed: git $*" >> ~/.git-audit.log
+```
+
+## 🔄 定期メンテナンス
+
+### 週次作業
+- [ ] ローカルブランチのクリーンアップ
+- [ ] リモート追跡ブランチの更新
+- [ ] 不要なファイルの削除
+
+### 月次作業
+- [ ] Git設定の見直し
+- [ ] ブランチ保護ルールの確認
+- [ ] チーム向けGitトレーニング
+
+```bash
+# ローカルブランチクリーンアップスクリプト
+#!/bin/bash
+# merged-branches-cleanup.sh
+
+echo "🧹 マージ済みブランチのクリーンアップ"
+
+# マージ済みローカルブランチを削除
+git branch --merged main | grep -v "main\|develop" | xargs -n 1 git branch -d
+
+# リモート追跡ブランチの更新
+git remote prune origin
+
+echo "✅ クリーンアップ完了"
+```
+

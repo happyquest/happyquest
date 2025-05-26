@@ -1,5 +1,119 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# HappyQuest プロジェクト文脈ルール
+
+## 🏗️ システムアーキテクチャ
+
+### 現在の工程
+- ✅ Ubuntu24.04開発環境構築（完了・やり直し中）
+- ✅ 初期インストールと設定作業終了（完了・ドキュメント化済）
+- 🔄 **GitHubベース開発フロー導入**（現在進行中）
+- 📋 Google Cloud環境構築（予定）
+- 📋 社内業務スケジュール化（予定）
+- 📋 LangGraphマルチエージェント環境導入（予定）
+- 📋 スクレイピング作業スケジュール化（予定）
+- 📋 ファインチューニング作業スケジュール化（予定）
+- 📋 新RAG開発導入（予定）
+- 📋 Cline独自システム開発（予定）
+
+## 💻 技術スタック
+
+### 開発環境
+- **OS**: Ubuntu 24.04 (WSL2)
+- **Shell**: PowerShell (Windows) + Bash (WSL)
+- **エディタ**: Cursor IDE with Claude Sonnet
+- **バージョン管理**: Git + GitHub
+
+### プログラミング言語
+- **Python**: 3.12.9 (pyenv管理)
+- **Node.js**: 18+ (MCPサーバー用)
+- **TypeScript**: フロントエンド開発用
+- **JavaScript**: 自動化スクリプト用
+
+### フレームワーク・ライブラリ
+- **LangChain/LangGraph**: マルチエージェントシステム
+- **FastAPI**: RESTful API開発
+- **Docker**: コンテナ化
+- **MongoDB**: データベース
+- **Playwright**: ブラウザ自動化・スクレイピング
+
+### インフラ・クラウド
+- **Google Cloud Platform**: 本番環境
+- **GitHub Actions**: CI/CD
+- **Docker Compose**: ローカル開発環境
+- **Terraform**: インフラ管理（予定）
+
+### AI/ML関連
+- **OpenAI API**: GPT-4, Claude Sonnet
+- **Hugging Face**: モデル管理
+- **Unsloth**: ファインチューニング
+- **WandB**: ML実験管理
+- **RAG**: 検索拡張生成システム
+
+## 🔧 開発ツール
+
+### MCPサーバー
+- **Filesystem MCP**: ファイル操作
+- **GitHub MCP**: リポジトリ操作
+- **Sequential Thinking MCP**: 思考プロセス管理
+
+### 品質管理
+- **ESLint**: JavaScript/TypeScript静的解析
+- **Prettier**: コードフォーマット
+- **pytest**: Python テストフレームワーク
+- **Jest**: JavaScript テストフレームワーク
+
+### ドキュメント
+- **PlantUML**: 図表作成必須
+- **Markdown**: ドキュメント形式
+- **Doxygen**: ソースコード文書化（予定）
+
+## 📁 プロジェクト構造
+
+```
+happyquest/
+├── .cursor/                    # Cursor設定
+│   ├── rules/                 # Project Rules
+│   └── mcp.json              # MCPサーバー設定
+├── MCP/                       # MCPサーバー実装
+├── 作業報告書/                 # 作業履歴
+├── docs/                      # ドキュメント
+│   └── plantuml/             # PlantUML図表
+├── src/                       # ソースコード
+├── tests/                     # テストコード
+├── scripts/                   # 自動化スクリプト
+└── infrastructure/            # インフラ設定
+```
+
+## 🎯 開発優先順位
+
+### Phase 1: 基盤構築
+1. GitHub リポジトリ設定
+2. CI/CD パイプライン構築
+3. 開発環境標準化
+
+### Phase 2: コア機能
+1. スクレイピングシステム
+2. データ処理パイプライン
+3. RAGシステム基盤
+
+### Phase 3: AI機能
+1. ファインチューニング環境
+2. マルチエージェントシステム
+3. 自動化ワークフロー
+
+## 🔒 セキュリティ要件
+- GitHub Personal Access Token管理
+- 環境変数による機密情報管理
+- Docker セキュリティベストプラクティス
+- API キー安全管理
+
+## 📊 品質メトリクス
+- コードカバレッジ: 80%以上
+- 静的解析: エラー0件
+- セキュリティスキャン: 脆弱性0件
+- ドキュメント: 全機能カバー
+
