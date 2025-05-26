@@ -1,0 +1,313 @@
+name: 🤖 AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    name: AI Code Review
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          
+      - name: 📦 Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          
+      - name: 🔍 Static Analysis
+        id: static-analysis
+        run: |
+          echo "🔍 Running static analysis..."
+          
+          # Python静的解析
+          flake8 src/ --output-file=flake8-report.txt --exit-zero
+          mypy src/ --txt-report mypy-report --exit-zero
+          bandit -r src/ -f json -o bandit-report.json --exit-zero
+          
+          # セキュリティチェック
+          safety check --json --output safety-report.json --exit-zero
+          
+          echo "static_analysis_complete=true" >> $GITHUB_OUTPUT
+          
+      - name: 🧪 Run Tests
+        id: tests
+        run: |
+          echo "🧪 Running tests with coverage..."
+          
+          # テスト実行とカバレッジ測定
+          pytest --cov=src --cov-report=json --cov-report=html --junitxml=pytest-report.xml
+          
+          # カバレッジ結果を環境変数に保存
+          COVERAGE=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "tests_complete=true" >> $GITHUB_OUTPUT
+          
+      - name: 📊 Quality Score Calculation
+        id: quality-score
+        run: |
+          python << 'EOF'
+          import json
+          import os
+          
+          # 品質スコア計算
+          def calculate_quality_score():
+              score = 100
+              
+              # テストカバレッジスコア (30%)
+              coverage = float(os.getenv('COVERAGE', '0'))
+              if coverage >= 80:
+                  coverage_score = 30
+              elif coverage >= 60:
+                  coverage_score = 20
+              elif coverage >= 40:
+                  coverage_score = 10
+              else:
+                  coverage_score = 0
+              
+              # 静的解析スコア (25%)
+              static_score = 25  # デフォルト満点
+              
+              # Flake8チェック
+              try:
+                  with open('flake8-report.txt', 'r') as f:
+                      flake8_issues = len(f.readlines())
+                      if flake8_issues > 10:
+                          static_score -= 10
+                      elif flake8_issues > 5:
+                          static_score -= 5
+              except:
+                  pass
+              
+              # セキュリティスコア (25%)
+              security_score = 25  # デフォルト満点
+              
+              try:
+                  with open('bandit-report.json', 'r') as f:
+                      bandit_data = json.load(f)
+                      high_severity = len([r for r in bandit_data.get('results', []) if r.get('issue_severity') == 'HIGH'])
+                      medium_severity = len([r for r in bandit_data.get('results', []) if r.get('issue_severity') == 'MEDIUM'])
+                      
+                      security_score -= (high_severity * 10 + medium_severity * 5)
+                      security_score = max(0, security_score)
+              except:
+                  pass
+              
+              # パフォーマンススコア (20%)
+              performance_score = 20  # デフォルト満点
+              
+              total_score = coverage_score + static_score + security_score + performance_score
+              return min(100, max(0, total_score))
+          
+          quality_score = calculate_quality_score()
+          print(f"Quality Score: {quality_score}")
+          
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"quality_score={quality_score}\n")
+          EOF
+          
+      - name: 📝 Generate Review Comment
+        id: review-comment
+        run: |
+          python << 'EOF'
+          import json
+          import os
+          
+          quality_score = int(os.getenv('QUALITY_SCORE', '0'))
+          coverage = float(os.getenv('COVERAGE', '0'))
+          
+          # レビューコメント生成
+          if quality_score >= 90:
+              status = "✅ AI Code Review - 優秀"
+              emoji = "🎉"
+          elif quality_score >= 80:
+              status = "✅ AI Code Review - 合格"
+              emoji = "👍"
+          elif quality_score >= 70:
+              status = "⚠️ AI Code Review - 要改善"
+              emoji = "⚠️"
+          else:
+              status = "❌ AI Code Review - 要修正"
+              emoji = "❌"
+          
+          comment = f"""## {status}
+
+### 📊 品質スコア: {quality_score}/100
+
+### 📈 メトリクス
+- **テストカバレッジ**: {coverage:.1f}%
+- **静的解析**: 実行済み
+- **セキュリティスキャン**: 実行済み
+
+### {emoji} 評価結果
+"""
+          
+          if quality_score >= 90:
+              comment += """
+### ✨ 優秀な品質です！
+- コード品質が非常に高いレベルに達しています
+- テストカバレッジが十分です
+- セキュリティベストプラクティスに準拠しています
+- 即座にマージ可能です
+
+### 🎯 次のステップ
+このPRは品質基準を大幅に上回っています。マージを推奨します。
+"""
+          elif quality_score >= 80:
+              comment += """
+### ✨ 良い点
+- 適切なコード品質を維持しています
+- テストカバレッジが目標値を満たしています
+- セキュリティ要件に準拠しています
+
+### 💡 改善提案
+- より詳細なコメントを追加すると保守性が向上します
+- エッジケースのテストを追加検討してください
+
+### 🎯 次のステップ
+このPRは品質基準を満たしています。マージ可能です。
+"""
+          elif quality_score >= 70:
+              comment += """
+### ⚠️ 改善が必要な項目
+- テストカバレッジの向上が必要です（目標: 80%以上）
+- 静的解析で検出された問題の修正を検討してください
+- コードの複雑度を下げることを推奨します
+
+### 🔧 推奨修正
+1. 不足しているテストケースを追加
+2. Lintエラーの修正
+3. 関数の分割によるコード簡素化
+
+### 📋 チェックリスト
+- [ ] テストカバレッジ80%以上
+- [ ] 静的解析エラー0件
+- [ ] セキュリティ問題修正
+"""
+          else:
+              comment += """
+### 🚨 必須修正項目
+- **重要**: 品質基準を満たしていません
+- テストカバレッジが不十分です
+- セキュリティ上の問題が検出されています
+- コード品質の大幅な改善が必要です
+
+### 🔧 必須修正
+1. **テスト追加**: カバレッジを80%以上に向上
+2. **セキュリティ修正**: 検出された脆弱性の修正
+3. **コード改善**: 静的解析エラーの解決
+
+### ⛔ マージ条件
+以下の条件を満たすまでマージを控えてください：
+- [ ] 品質スコア80点以上
+- [ ] 全ての必須修正項目完了
+- [ ] セキュリティスキャンパス
+"""
+          
+          comment += f"""
+
+### 📊 詳細レポート
+- **実行時刻**: {os.getenv('GITHUB_RUN_ID', 'N/A')}
+- **ブランチ**: {os.getenv('GITHUB_HEAD_REF', 'N/A')}
+- **コミット**: {os.getenv('GITHUB_SHA', 'N/A')[:8]}
+
+---
+*このレビューは AI によって自動生成されました。詳細な分析結果は Actions タブで確認できます。*
+"""
+          
+          # コメントをファイルに保存
+          with open('review-comment.md', 'w', encoding='utf-8') as f:
+              f.write(comment)
+          
+          print("Review comment generated successfully")
+          EOF
+          
+      - name: 💬 Post Review Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('review-comment.md', 'utf8');
+            
+            // 既存のAIレビューコメントを削除
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            for (const existingComment of comments.data) {
+              if (existingComment.body.includes('AI Code Review')) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                });
+              }
+            }
+            
+            // 新しいレビューコメントを投稿
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+            
+      - name: 📤 Upload Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: code-quality-reports
+          path: |
+            flake8-report.txt
+            mypy-report/
+            bandit-report.json
+            safety-report.json
+            coverage.json
+            htmlcov/
+            pytest-report.xml
+            
+      - name: 🎯 Set Status Check
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const qualityScore = parseInt('${{ steps.quality-score.outputs.quality_score }}');
+            
+            let state, description;
+            if (qualityScore >= 80) {
+              state = 'success';
+              description = `品質スコア: ${qualityScore}/100 - マージ可能`;
+            } else {
+              state = 'failure';
+              description = `品質スコア: ${qualityScore}/100 - 改善が必要`;
+            }
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: state,
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: description,
+              context: 'AI Code Review'
+            });
+</rewritten_file> 

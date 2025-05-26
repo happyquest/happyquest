@@ -1,0 +1,241 @@
+# HappyQuest Project .gitignore
+
+# 🔐 機密情報・環境変数
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+config/secrets.yml
+
+# 🐍 Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 🧪 テスト・カバレッジ
+.coverage
+.pytest_cache/
+cover/
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# 📊 Jupyter Notebook
+.ipynb_checkpoints
+
+# 🔧 開発環境
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 📦 Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# 🏗️ ビルド成果物
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+.grunt
+.lock-wscript
+build/Release
+.nyc_output
+.cache/
+.parcel-cache/
+.next/
+out/
+.nuxt/
+dist/
+.cache/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+
+# 🗄️ データベース
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+database.db
+
+# 📁 OS固有
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# 🔄 バックアップ・一時ファイル
+*.bak
+*.tmp
+*.temp
+*~
+.#*
+#*#
+
+# 📈 ログファイル
+*.log
+logs/
+log/
+security.log
+audit.log
+
+# 🐳 Docker
+.dockerignore
+docker-compose.override.yml
+
+# ☁️ クラウド設定
+.gcloud/
+.aws/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+*.tfvars
+
+# 🤖 AI・ML関連
+models/
+*.model
+*.pkl
+*.pickle
+wandb/
+mlruns/
+.mlflow/
+
+# 📊 データファイル
+data/
+datasets/
+*.csv
+*.json
+*.xml
+*.xlsx
+*.parquet
+
+# 🔍 解析レポート
+bandit-report.json
+safety-report.json
+flake8-report.txt
+mypy-report/
+pytest-report.xml
+
+# 📚 ドキュメント生成
+docs/_build/
+site/
+.mkdocs/
+
+# 🎯 IDE・エディタ固有
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+*.sublime-project
+*.sublime-workspace
+
+# 🔧 ツール設定
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# 📦 パッケージマネージャー
+poetry.lock
+Pipfile.lock
+yarn.lock
+package-lock.json
+
+# 🚀 デプロイ関連
+.vercel/
+.netlify/
+.firebase/
+
+# 🎨 アセット
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.webp
+!docs/images/
+!assets/icons/
+
+# 📱 モバイル
+*.apk
+*.ipa
+*.app
+
+# 🎮 ゲーム開発
+*.unity
+*.unitypackage
+
+# 📺 メディアファイル
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mp3
+*.wav
+*.ogg
+
+# 🔐 セキュリティ
+*.crt
+*.csr
+*.der
+*.p7b
+*.p7c
+*.p7m
+*.p7s
+*.pem
+*.pfx
+*.p12
+
+# 🏢 企業固有
+.company/
+internal/
+proprietary/
+
+# 🧹 クリーンアップ対象外
+!.gitkeep
+!.placeholder 
