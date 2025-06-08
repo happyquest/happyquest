@@ -1,0 +1,65 @@
+{
+  "mcpServers": {
+    "github-stable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "disabled": false,
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "settings": {
+        "enabledTools": [
+          "get_file_contents",
+          "list_repositories", 
+          "search_code",
+          "get_issue",
+          "create_issue",
+          "list_issues",
+          "get_pull_request",
+          "list_pull_requests"
+        ],
+        "maxConcurrentRequests": 3,
+        "requestTimeout": 30000
+      },
+      "description": "HappyQuest安定版GitHub MCP - 8ツール最適化"
+    },
+    "browser-docker": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--name", "happyquest-browser-mcp",
+        "-e", "DISPLAY=:0",
+        "-v", "/tmp/.X11-unix:/tmp/.X11-unix:rw",
+        "--shm-size=2gb",
+        "ghcr.io/microsoft/playwright:v1.40.0-focal"
+      ],
+      "disabled": true,
+      "settings": {
+        "enabledTools": [
+          "browser_navigate",
+          "browser_snapshot",
+          "browser_click",
+          "browser_type",
+          "browser_take_screenshot"
+        ],
+        "resourceLimits": {
+          "memory": "1GB",
+          "cpu": "1"
+        }
+      },
+      "description": "Docker化ブラウザ自動化 - サンドボックス実行"
+    }
+  },
+  "globalSettings": {
+    "totalToolLimit": 40,
+    "preferredProvider": "github-stable",
+    "optimization": {
+      "memoryLimit": "256MB",
+      "cacheEnabled": true,
+      "compressionEnabled": true
+    }
+  }
+}

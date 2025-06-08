@@ -1,0 +1,538 @@
+---
+- name: Ubuntu 24.04 WSL2 Development Environment Setup
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    admin_user: "{{ admin_user | default('nanashi7777') }}"
+    regular_user: "{{ regular_user | default('taki') }}"
+    project_name: "{{ project_name | default('happyquest') }}"
+    project_dir: "/home/{{ admin_user }}/{{ project_name }}"
+    python_version: "3.12.9"
+    node_version: "23.8.0"
+
+  tasks:
+    # Docker Installation
+    - name: Install Docker prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Add users to docker group
+      user:
+        name: "{{ item }}"
+        groups: docker
+        append: yes
+      loop:
+        - "{{ admin_user }}"
+        - "{{ regular_user }}"
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # Homebrew Installation
+    - name: Check if Homebrew is installed
+      stat:
+        path: /home/linuxbrew/.linuxbrew/bin/brew
+      register: homebrew_check
+      become: no
+
+    - name: Install Homebrew
+      shell: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      become: no
+      become_user: "{{ admin_user }}"
+      when: not homebrew_check.stat.exists
+
+    - name: Add Homebrew to PATH for admin user
+      lineinfile:
+        path: "/home/{{ admin_user }}/.bashrc"
+        line: 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
+        create: yes
+      become: no
+
+    # GitHub CLI Installation
+    - name: Install GitHub CLI via Homebrew
+      shell: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        brew install gh
+      become: no
+      become_user: "{{ admin_user }}"
+
+    # pyenv Installation
+    - name: Install pyenv dependencies
+      apt:
+        name:
+          - make
+          - build-essential
+          - libssl-dev
+          - zlib1g-dev
+          - libbz2-dev
+          - libreadline-dev
+          - libsqlite3-dev
+          - wget
+          - curl
+          - llvm
+          - libncurses5-dev
+          - libncursesw5-dev
+          - xz-utils
+          - tk-dev
+          - libffi-dev
+          - liblzma-dev
+          - python3-openssl
+        state: present
+
+    - name: Install pyenv
+      shell: |
+        curl https://pyenv.run | bash
+      become: no
+      become_user: "{{ admin_user }}"
+      args:
+        creates: "/home/{{ admin_user }}/.pyenv"
+
+    - name: Add pyenv to PATH for admin user
+      blockinfile:
+        path: "/home/{{ admin_user }}/.bashrc"
+        block: |
+          export PYENV_ROOT="$HOME/.pyenv"
+          [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+          eval "$(pyenv init -)"
+        marker: "# {mark} PYENV CONFIG"
+        create: yes
+      become: no
+
+    - name: Install Python {{ python_version }} via pyenv
+      shell: |
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init -)"
+        pyenv install {{ python_version }}
+        pyenv global {{ python_version }}
+      become: no
+      become_user: "{{ admin_user }}"
+      args:
+        creates: "/home/{{ admin_user }}/.pyenv/versions/{{ python_version }}"
+
+    # uv Installation (Python package manager)
+    - name: Install uv
+      shell: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+      become: no
+      become_user: "{{ admin_user }}"
+      args:
+        creates: "/home/{{ admin_user }}/.cargo/bin/uv"
+
+    - name: Add uv to PATH for admin user
+      lineinfile:
+        path: "/home/{{ admin_user }}/.bashrc"
+        line: 'export PATH="$HOME/.cargo/bin:$PATH"'
+        create: yes
+      become: no
+
+    # NVM and Node.js Installation
+    - name: Install nvm
+      shell: |
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+      become: no
+      become_user: "{{ admin_user }}"
+      args:
+        creates: "/home/{{ admin_user }}/.nvm"
+
+    - name: Install Node.js {{ node_version }} via nvm
+      shell: |
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        nvm install {{ node_version }}
+        nvm use {{ node_version }}
+        nvm alias default {{ node_version }}
+      become: no
+      become_user: "{{ admin_user }}"
+      args:
+        executable: /bin/bash
+
+    # Testing Framework Installation
+    - name: Install Python testing tools via uv
+      shell: |
+        export PATH="$HOME/.cargo/bin:$PATH"
+        export PYENV_ROOT="$HOME/.pyenv"
+        export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init -)"
+        uv pip install --system pytest pytest-cov pytest-mock pytest-html black flake8 mypy
+      become: no
+      become_user: "{{ admin_user }}"
+
+    - name: Install Node.js testing tools
+      shell: |
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm install -g jest typescript ts-node eslint prettier @types/node
+      become: no
+      become_user: "{{ admin_user }}"
+      args:
+        executable: /bin/bash
+
+    # Project Structure Setup
+    - name: Create project structure
+      file:
+        path: "{{ project_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: '0755'
+      loop:
+        - src
+        - tests
+        - docs
+        - docs/plantuml
+        - docs/database
+        - docs/images
+        - infrastructure
+        - infrastructure/packer
+        - infrastructure/ansible
+        - infrastructure/docker
+        - 作業報告書
+        - トラブル事例
+        - アーカイブ
+
+    # Essential Project Files
+    - name: Create .gitignore
+      copy:
+        dest: "{{ project_dir }}/.gitignore"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        content: |
+          # Python
+          __pycache__/
+          *.py[cod]
+          *$py.class
+          *.so
+          .Python
+          build/
+          develop-eggs/
+          dist/
+          downloads/
+          eggs/
+          .eggs/
+          lib/
+          lib64/
+          parts/
+          sdist/
+          var/
+          wheels/
+          *.egg-info/
+          .installed.cfg
+          *.egg
+          
+          # Virtual environments
+          .env
+          .venv
+          env/
+          venv/
+          ENV/
+          env.bak/
+          venv.bak/
+          
+          # Node.js
+          node_modules/
+          npm-debug.log*
+          yarn-debug.log*
+          yarn-error.log*
+          
+          # IDE
+          .vscode/
+          .idea/
+          *.swp
+          *.swo
+          *~
+          
+          # OS
+          .DS_Store
+          Thumbs.db
+          
+          # Testing
+          .coverage
+          htmlcov/
+          .pytest_cache/
+          
+          # Vault
+          .vault-token
+          vault-data/
+          
+          # Logs
+          *.log
+          logs/
+
+    - name: Create package.json for Node.js projects
+      copy:
+        dest: "{{ project_dir }}/package.json"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        content: |
+          {
+            "name": "{{ project_name }}",
+            "version": "1.0.0",
+            "description": "HappyQuest Development Project",
+            "main": "index.js",
+            "scripts": {
+              "test": "jest",
+              "test:watch": "jest --watch",
+              "test:coverage": "jest --coverage",
+              "lint": "eslint src/",
+              "format": "prettier --write src/"
+            },
+            "keywords": ["happyquest", "ai", "development"],
+            "author": "HappyQuest Team",
+            "license": "MIT",
+            "devDependencies": {
+              "jest": "^29.7.0",
+              "eslint": "^8.57.0",
+              "prettier": "^3.1.0",
+              "@types/jest": "^29.5.8",
+              "@types/node": "^20.9.0"
+            }
+          }
+
+    - name: Create pytest.ini
+      copy:
+        dest: "{{ project_dir }}/pytest.ini"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        content: |
+          [tool:pytest]
+          testpaths = tests
+          python_files = test_*.py
+          python_classes = Test*
+          python_functions = test_*
+          addopts = 
+              --verbose
+              --tb=short
+              --cov=src
+              --cov-report=html
+              --cov-report=term-missing
+              --cov-fail-under=80
+
+    # SSH Configuration
+    - name: Generate SSH key for admin user
+      openssh_keypair:
+        path: "/home/{{ admin_user }}/.ssh/id_rsa"
+        type: rsa
+        size: 4096
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: '0600'
+      become: no
+
+    - name: Set SSH directory permissions
+      file:
+        path: "/home/{{ admin_user }}/.ssh"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"  
+        mode: '0700'
+      become: no
+
+    # CI/CD GitHub Actions Setup
+    - name: Create GitHub Actions directory
+      file:
+        path: "{{ project_dir }}/.github/workflows"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: '0755'
+
+    - name: Create CI/CD workflow
+      copy:
+        dest: "{{ project_dir }}/.github/workflows/ci.yml"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        content: |
+          name: CI/CD Pipeline
+          
+          on:
+            push:
+              branches: [ main, develop ]
+            pull_request:
+              branches: [ main, develop ]
+          
+          jobs:
+            test-python:
+              runs-on: ubuntu-latest
+              strategy:
+                matrix:
+                  python-version: [3.12]
+              
+              steps:
+              - uses: actions/checkout@v4
+              - name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v4
+                with:
+                  python-version: ${{ matrix.python-version }}
+              
+              - name: Install uv
+                run: curl -LsSf https://astral.sh/uv/install.sh | sh
+              
+              - name: Install dependencies
+                run: uv pip install --system -r requirements.txt
+              
+              - name: Run linting
+                run: |
+                  flake8 src/
+                  black --check src/
+                  mypy src/
+              
+              - name: Run tests
+                run: pytest
+              
+              - name: Upload coverage reports
+                uses: codecov/codecov-action@v3
+                with:
+                  file: ./coverage.xml
+          
+            test-node:
+              runs-on: ubuntu-latest
+              strategy:
+                matrix:
+                  node-version: [20.x]
+              
+              steps:
+              - uses: actions/checkout@v4
+              - name: Use Node.js ${{ matrix.node-version }}
+                uses: actions/setup-node@v4
+                with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: 'npm'
+              
+              - name: Install dependencies
+                run: npm ci
+              
+              - name: Run linting
+                run: npm run lint
+              
+              - name: Run tests
+                run: npm test
+
+    # Makefile for easy commands
+    - name: Create Makefile
+      copy:
+        dest: "{{ project_dir }}/Makefile"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        content: |
+          .PHONY: help install test test-watch lint format clean vault-init vault-status
+          
+          help: ## Show this help message
+          	@echo 'Usage: make [target]'
+          	@echo ''
+          	@echo 'Targets:'
+          	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+          
+          install: ## Install all dependencies
+          	uv pip install --system pytest pytest-cov pytest-mock pytest-html black flake8 mypy
+          	npm install
+          
+          test: ## Run all tests
+          	pytest
+          	npm test
+          
+          test-watch: ## Run tests in watch mode
+          	pytest --watch &
+          	npm run test:watch
+          
+          lint: ## Run linting
+          	flake8 src/
+          	black --check src/
+          	mypy src/
+          	npm run lint
+          
+          format: ## Format code
+          	black src/
+          	npm run format
+          
+          clean: ## Clean build artifacts
+          	find . -type d -name __pycache__ -delete
+          	find . -name "*.pyc" -delete
+          	rm -rf .coverage htmlcov/
+          	rm -rf node_modules/
+          
+          vault-init: ## Initialize Vault
+          	export VAULT_ADDR='http://127.0.0.1:8200' && vault operator init
+          
+          vault-status: ## Check Vault status
+          	export VAULT_ADDR='http://127.0.0.1:8200' && vault status
+
+    # Final system configuration
+    - name: Update system packages
+      apt:
+        upgrade: dist
+        update_cache: yes
+
+    - name: Install additional utilities
+      apt:
+        name:
+          - jq
+          - yq
+          - tmux
+          - screen
+          - neofetch
+          - bat
+          - ripgrep
+        state: present
+
+    # Setup completion message
+    - name: Create setup completion script
+      copy:
+        dest: "{{ project_dir }}/setup-complete.sh"
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          echo "🎉 Ubuntu 24.04 WSL2 Development Environment Setup Complete!"
+          echo ""
+          echo "📋 Installed Software:"
+          echo "  - Docker: $(docker --version)"
+          echo "  - Python: $(python3 --version)"
+          echo "  - Node.js: $(node --version)"
+          echo "  - GitHub CLI: $(gh --version)"
+          echo "  - Vault: $(vault --version)"
+          echo ""
+          echo "🔧 Next Steps:"
+          echo "  1. Initialize Vault: make vault-init"
+          echo "  2. Configure GitHub CLI: gh auth login"
+          echo "  3. Install project deps: make install"
+          echo "  4. Run tests: make test"
+          echo ""
+          echo "📁 Project Structure:"
+          tree {{ project_dir }} -L 2
+          echo ""
+          echo "✅ Ready for development!" 
