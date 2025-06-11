@@ -1,0 +1,64 @@
+name: Ansible Lint
+
+on:
+  pull_request:
+    branches: [ "main", "stable", "release/v*" ]
+    paths:
+      - 'infrastructure/ansible/**'
+      - '.github/workflows/ansible-lint.yml'
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'infrastructure/ansible/**'
+
+jobs:
+  ansible-lint:
+    name: Ansible Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible and ansible-lint
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible ansible-lint>=6.0.0
+
+      - name: Run ansible-lint
+        uses: ansible/ansible-lint@main
+        with:
+          requirements_file: 'infrastructure/ansible/requirements.yml'
+          working_directory: 'infrastructure/ansible'
+          args: "--strict -p -v --force-color"
+
+  ansible-syntax:
+    name: Ansible Syntax Check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Install requirements
+        run: |
+          cd infrastructure/ansible
+          ansible-galaxy install -r requirements.yml
+
+      - name: Syntax check
+        run: |
+          cd infrastructure/ansible
+          ansible-playbook --syntax-check ubuntu24-setup.yml 

@@ -1,0 +1,91 @@
+name: CI Integration Pipeline
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  quality-checks:
+    name: Code Quality Checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install yamllint shellcheck-py
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: YAML Lint
+        run: |
+          find . -name "*.yml" -o -name "*.yaml" | xargs yamllint -d relaxed
+
+      - name: Shell Script Lint
+        run: |
+          find . -name "*.sh" | xargs shellcheck
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  test-execution:
+    name: Test Execution
+    runs-on: ubuntu-24.04
+    needs: [quality-checks]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+
+      - name: Run tests
+        run: |
+          if [ -f "tests/test_*.py" ]; then
+            pytest tests/ --cov=src/ --cov-report=xml
+          else
+            echo "No tests found, creating placeholder"
+            mkdir -p tests
+            echo "# Placeholder for future tests" > tests/README.md
+          fi
+
+      - name: Upload coverage to Codecov
+        if: github.event_name == 'pull_request'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false 
