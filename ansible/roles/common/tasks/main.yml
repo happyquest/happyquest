@@ -1,0 +1,40 @@
+---
+- name: システムを更新
+  apt:
+    update_cache: yes
+    upgrade: dist
+    cache_valid_time: 3600
+
+- name: 必要なパッケージをインストール
+  apt:
+    name:
+      - build-essential
+      - curl
+      - git
+      - libssl-dev
+      - libncurses5-dev
+      - libncursesw5-dev
+      - libreadline-dev
+      - libsqlite3-dev
+      - libgdbm-dev
+      - libbz2-dev
+      - libexpat1-dev
+      - liblzma-dev
+      - zlib1g-dev
+      - python3
+      - python3-pip
+      - python3-venv
+    state: present
+
+- name: Homebrewをインストール
+  shell: |
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  args:
+    creates: /home/linuxbrew/.linuxbrew/bin/brew
+
+- name: GitHub CLIをインストール
+  shell: brew install gh
+  args:
+    creates: /home/linuxbrew/.linuxbrew/bin/gh 

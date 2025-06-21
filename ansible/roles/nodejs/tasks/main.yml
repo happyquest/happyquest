@@ -1,0 +1,28 @@
+---
+- name: nvmをインストール
+  shell: brew install nvm
+  args:
+    creates: /home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh
+
+- name: nvmディレクトリを作成
+  file:
+    path: "{{ ansible_env.HOME }}/.nvm"
+    state: directory
+    mode: '0755'
+
+- name: nvmの環境変数を設定
+  blockinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    block: |
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "/home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh" ] && \. "/home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh"
+      [ -s "/home/linuxbrew/.linuxbrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/home/linuxbrew/.linuxbrew/opt/nvm/etc/bash_completion.d/nvm"
+    create: yes
+
+- name: Node.jsをインストール
+  shell: |
+    source ~/.bashrc
+    nvm install 23.8.0
+    nvm use 23.8.0
+  args:
+    creates: "{{ ansible_env.HOME }}/.nvm/versions/node/v23.8.0" 
