@@ -1,0 +1,91 @@
+name: 🚀 機能追加・改善提案
+description: 新機能の追加や既存機能の改善を提案する
+title: "[機能名]: [改善内容]"
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🚀 機能追加・改善提案
+        新機能の追加や既存機能の改善について詳しく教えてください。
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: 📋 概要
+      description: 改善・追加したい機能の概要を簡潔に記述してください
+      placeholder: 例：チャットログのエクスポート機能を追加したい
+    validations:
+      required: true
+
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 🎯 目的
+      description: なぜこの改善が必要なのか、どのような問題を解決するのかを説明してください
+      placeholder: 例：現在はログを手動でコピーする必要があり、効率が悪い
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: 📝 詳細
+      description: 具体的な実装内容や変更内容を説明してください
+      placeholder: |
+        ### 現状の問題
+        - 問題点1
+        - 問題点2
+
+        ### 提案する解決策
+        - 解決策1
+        - 解決策2
+
+        ### 実装方針
+        - 実装手順1
+        - 実装手順2
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: completion_criteria
+    attributes:
+      label: ✅ 完了条件
+      description: この機能が完了したと判断する条件を選択してください
+      options:
+        - label: 機能実装完了
+        - label: テスト実施
+        - label: ドキュメント更新
+        - label: レビュー完了
+        - label: セキュリティチェック完了
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🔥 優先度
+      description: この機能の優先度を選択してください
+      options:
+        - 低 (時間があるときに)
+        - 中 (通常の開発サイクル内で)
+        - 高 (早急に対応が必要)
+        - 緊急 (即座に対応が必要)
+    validations:
+      required: true
+
+  - type: textarea
+    id: related
+    attributes:
+      label: 🔗 関連
+      description: 関連するIssueや参考資料があれば記載してください
+      placeholder: |
+        - 関連Issue: #番号
+        - 参考資料: [URL]
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 💡 備考
+      description: その他の考慮事項や補足情報があれば記載してください
+      placeholder: 追加の考慮事項があれば記載
