@@ -10,6 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: 🔨 Build & Test
+    timeout-minutes: 15
     
     steps:
       - name: 📥 Checkout code
@@ -47,6 +48,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     name: 🧹 Lint & Format
+    timeout-minutes: 10
     
     steps:
       - name: 📥 Checkout code
@@ -72,6 +74,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     name: 🚀 Deploy
+    timeout-minutes: 20
     
     steps:
       - name: 📥 Checkout code

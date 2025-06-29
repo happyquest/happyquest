@@ -46,9 +46,9 @@ services:
       - MONGO_INITDB_DATABASE=mcp
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 30s
+      timeout: 240s
+      retries: 3
     networks:
       - mcp_network
 

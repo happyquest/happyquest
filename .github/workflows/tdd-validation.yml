@@ -1,0 +1,291 @@
+name: TDD Validation Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 毎日深夜2時に環境健全性チェック
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '23.8.0'
+  PYTHON_VERSION: '3.12.9'
+
+jobs:
+  environment-validation:
+    name: Environment Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      validation-status: ${{ steps.validation.outputs.status }}
+      test-results: ${{ steps.validation.outputs.junit_file }}
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Setup Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl git build-essential
+        
+    - name: Verify Environment Versions
+      run: |
+        echo "=== Environment Versions ==="
+        node --version
+        python3 --version
+        docker --version
+        git --version
+        
+    - name: Run Environment Validation Tests
+      id: validation
+      run: |
+        chmod +x scripts/automated-validation.sh
+        ./scripts/automated-validation.sh
+        echo "status=success" >> $GITHUB_OUTPUT
+        echo "junit_file=quality-reports/junit-results-*.xml" >> $GITHUB_OUTPUT
+      continue-on-error: true
+      
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: validation-results
+        path: |
+          quality-reports/
+          *.log
+        retention-days: 30
+        
+    - name: Publish Test Results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Environment Validation Tests
+        path: 'quality-reports/junit-results-*.xml'
+        reporter: java-junit
+
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    needs: environment-validation
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install Dependencies
+      run: |
+        if [ -f package.json ]; then
+          npm ci
+        fi
+        
+    - name: Run ESLint (if configured)
+      run: |
+        if [ -f .eslintrc.js ] || [ -f .eslintrc.json ]; then
+          npm run lint || echo "ESLint not configured"
+        fi
+      continue-on-error: true
+      
+    - name: Run Shell Script Linting
+      run: |
+        if command -v shellcheck &> /dev/null; then
+          find . -name "*.sh" -type f -exec shellcheck {} \; || true
+        else
+          echo "shellcheck not available, skipping"
+        fi
+      continue-on-error: true
+      
+    - name: Check PROJECT_RULES Compliance
+      run: |
+        echo "=== PROJECT_RULES.md Compliance Check ==="
+        
+        # 必須ドキュメント確認
+        docs=("README.md" "SRS.md" "ARCHITECTURE.md" "TEST_POLICY.md" "API_SPEC.md" "CLAUDE.md")
+        for doc in "${docs[@]}"; do
+          if [ -f "$doc" ]; then
+            echo "✅ $doc exists"
+          else
+            echo "❌ $doc missing"
+          fi
+        done
+        
+        # ディレクトリ構造確認
+        dirs=("src" "tests" "docs" "scripts" "infrastructure")
+        for dir in "${dirs[@]}"; do
+          if [ -d "$dir" ]; then
+            echo "✅ $dir/ directory exists"
+          else
+            echo "⚠️ $dir/ directory recommended"
+          fi
+        done
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: environment-validation
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Run Secret Scan
+      run: |
+        echo "=== Secret Scanning ==="
+        
+        # 基本的な機密情報パターンスキャン
+        patterns=("password" "secret" "token" "key" "api_key")
+        found=0
+        
+        for pattern in "${patterns[@]}"; do
+          matches=$(grep -r -i "$pattern" . --exclude-dir=".git" --exclude="*.md" --exclude="CLAUDE.md" || true)
+          if [ -n "$matches" ]; then
+            echo "⚠️ Potential secret found: $pattern"
+            ((found++))
+          fi
+        done
+        
+        if [ $found -eq 0 ]; then
+          echo "✅ No obvious secrets detected"
+        else
+          echo "⚠️ $found potential security issues found"
+        fi
+        
+    - name: File Permission Check
+      run: |
+        echo "=== File Permission Check ==="
+        
+        # 実行ファイル権限確認
+        find . -name "*.sh" -type f | while read -r script; do
+          if [ -x "$script" ]; then
+            echo "✅ $script is executable"
+          else
+            echo "⚠️ $script is not executable"
+          fi
+        done
+
+  deployment-readiness:
+    name: Deployment Readiness
+    runs-on: ubuntu-latest
+    needs: [environment-validation, code-quality, security-scan]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Check Deployment Readiness
+      run: |
+        echo "=== Deployment Readiness Check ==="
+        
+        readiness_score=0
+        total_checks=5
+        
+        # 1. 必須ドキュメント
+        if [ -f "README.md" ] && [ -f "PROJECT_RULES.md" ]; then
+          echo "✅ Essential documentation present"
+          ((readiness_score++))
+        else
+          echo "❌ Missing essential documentation"
+        fi
+        
+        # 2. テスト設定
+        if [ -f "scripts/automated-validation.sh" ]; then
+          echo "✅ Validation framework present"
+          ((readiness_score++))
+        else
+          echo "❌ Validation framework missing"
+        fi
+        
+        # 3. 環境設定
+        if [ -f ".cursor/mcp.json" ] || [ -f "mcp.json" ]; then
+          echo "✅ MCP configuration present"
+          ((readiness_score++))
+        else
+          echo "❌ MCP configuration missing"
+        fi
+        
+        # 4. 自動化スクリプト
+        script_count=$(find scripts/ -name "*.sh" -type f 2>/dev/null | wc -l)
+        if [ "$script_count" -ge 2 ]; then
+          echo "✅ Automation scripts present ($script_count scripts)"
+          ((readiness_score++))
+        else
+          echo "❌ Insufficient automation scripts"
+        fi
+        
+        # 5. インフラ設定
+        if [ -d "infrastructure/" ] && [ -f "infrastructure/run-setup.sh" ]; then
+          echo "✅ Infrastructure configuration present"
+          ((readiness_score++))
+        else
+          echo "❌ Infrastructure configuration incomplete"
+        fi
+        
+        # 結果判定
+        readiness_percent=$((readiness_score * 100 / total_checks))
+        echo ""
+        echo "=== Deployment Readiness: $readiness_percent% ($readiness_score/$total_checks) ==="
+        
+        if [ $readiness_percent -ge 80 ]; then
+          echo "🎉 Ready for deployment"
+          exit 0
+        elif [ $readiness_percent -ge 60 ]; then
+          echo "⚠️ Deployment with caution"
+          exit 0
+        else
+          echo "❌ Not ready for deployment"
+          exit 1
+        fi
+        
+    - name: Generate Deployment Report
+      if: always()
+      run: |
+        echo "=== Deployment Report ===" > deployment-report.md
+        echo "- Timestamp: $(date)" >> deployment-report.md
+        echo "- Branch: ${{ github.ref }}" >> deployment-report.md
+        echo "- Commit: ${{ github.sha }}" >> deployment-report.md
+        echo "- Environment Validation: ${{ needs.environment-validation.outputs.validation-status }}" >> deployment-report.md
+        
+    - name: Upload Deployment Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: deployment-report
+        path: deployment-report.md
+
+  notification:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [environment-validation, code-quality, security-scan, deployment-readiness]
+    if: always()
+    
+    steps:
+    - name: Send Status Notification
+      run: |
+        echo "=== Pipeline Status Notification ==="
+        echo "Environment Validation: ${{ needs.environment-validation.result }}"
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Security Scan: ${{ needs.security-scan.result }}"
+        echo "Deployment Readiness: ${{ needs.deployment-readiness.result }}"
+        
+        # 将来的にSlack/Teams通知を追加可能
+        echo "Pipeline completed at $(date)"

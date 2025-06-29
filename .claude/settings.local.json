@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ss:*)",
+      "Bash(docker logs:*)",
+      "Bash(curl:*)",
+      "Bash(env)",
+      "Bash(npx:*)",
+      "Bash(npm search mcp-jira)",
+      "Bash(node:*)",
+      "Bash(nvm use:*)",
+      "Bash(source:*)",
+      "Bash(docker:*)",
+      "Bash(gh:*)",
+      "Bash(pyenv:*)",
+      "Bash(nvm list:*)",
+      "Bash(uv:*)",
+      "Bash(brew:*)",
+      "Bash(ls:*)",
+      "Bash(dpkg:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(echo $WSL_DISTRO_NAME)",
+      "Bash(wslpath:*)",
+      "Bash(find:*)",
+      "Bash(chmod:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(ansible:*)",
+      "Bash(export NVM_DIR=\"$HOME/.nvm\")",
+      "Bash([ -s \"$NVM_DIR/nvm.sh\" ])",
+      "Bash(. \"$NVM_DIR/nvm.sh\")",
+      "Bash(nvm:*)",
+      "Bash(npm --version)",
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(./scripts/automated-validation.sh:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

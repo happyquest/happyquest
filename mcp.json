@@ -1,0 +1,24 @@
+{
+  "servers": {
+    "playwright": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "--network=host",
+        "mcp/playwright"
+      ],
+      "description": "Playwright MCP server for browser automation (running in Docker)."
+    },
+    "time": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "mcp/time",
+        "--local-timezone=America/New_York"
+      ],
+      "description": "Time MCP server for time and timezone conversions (running in Docker)."
+    }
+  }
+}
