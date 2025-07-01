@@ -46,7 +46,8 @@ case "$1" in
     
   "auto-stop")
     echo "30分後に重いサービスを自動停止します..."
-    sleep 1800 && docker stop happyquest-n8n &
+    (sleep 1800 && docker stop happyquest-n8n || echo "Auto-stop failed: $?" >&2) &
+echo "Background job PID: $!"
     echo "バックグラウンドで30分タイマー開始"
     ;;
     

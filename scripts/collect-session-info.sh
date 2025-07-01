@@ -126,7 +126,7 @@ $(curl -s https://api.github.com/user 2>/dev/null | jq '.login // "認証なし"
 
 ### リモートリポジトリ
 \`\`\`
-$(git remote -v 2>/dev/null | sed 's/ghp_[a-zA-Z0-9_]*/[GITHUB_TOKEN_MASKED]/g' | sed 's/gho_[a-zA-Z0-9_]*/[GITHUB_TOKEN_MASKED]/g' || echo "リモートリポジトリなし")
+$(git remote -v 2>/dev/null | sed 's/ghp_[a-zA-Z0-9_]\{36\}/[GITHUB_TOKEN_MASKED]/g' | sed 's/gho_[a-zA-Z0-9_]\{36\}/[GITHUB_TOKEN_MASKED]/g' | sed 's/github_pat_[a-zA-Z0-9_]\{82\}/[GITHUB_TOKEN_MASKED]/g' || echo "リモートリポジトリなし")
 \`\`\`
 
 ## 最近のコマンド履歴

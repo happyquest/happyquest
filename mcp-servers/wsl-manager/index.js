@@ -156,7 +156,10 @@ class WSLManagerServer {
     try {
       // PowerShellスクリプトを実行
       const scriptPath = path.resolve('./test-new-wsl-instance.ps1');
-      const command = `powershell.exe -ExecutionPolicy Bypass -File "${scriptPath}" -TestInstanceName "${instanceName}" -SourceDistro "${sourceDistro}"`;
+      // セキュリティ: コマンドインジェクション対策
+const escapedInstanceName = instanceName.replace(/["`$\\]/g, '\\$&');
+const escapedSourceDistro = sourceDistro.replace(/["`$\\]/g, '\\$&');
+const command = `powershell.exe -ExecutionPolicy Bypass -File "${scriptPath}" -TestInstanceName "${escapedInstanceName}" -SourceDistro "${escapedSourceDistro}"`;
       
       const { stdout, stderr } = await execAsync(command);
       

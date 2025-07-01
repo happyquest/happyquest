@@ -338,9 +338,6 @@ main() {
     fi
 }
 
-main "$@"  </testsuite>
-</testsuites>
-
 # JUnitレポート終了処理
 generate_junit_report() {
     local total_tests=$((pass_count + warn_count + fail_count))
@@ -367,5 +364,6 @@ generate_junit_report() {
     success "JUnitレポート生成: $JUNIT_REPORT"
 }
 
-# メイン関数の最後で呼び出し
+# メイン実行
+main "$@"
 generate_junit_report

@@ -36,7 +36,12 @@ if [ $# -eq 2 ] && [[ ! "$1" =~ ^[0-9]+$ ]]; then
     
     # 変更をプッシュ
     echo "📤 変更をプッシュ中..."
-    git push -u origin "$CURRENT_BRANCH"
+    if git push -u origin "$CURRENT_BRANCH"; then
+    echo "✅ プッシュ成功"
+else
+    echo "❌ プッシュに失敗しました"
+    exit 1
+fi
     
     # プルリクエスト作成
     echo "🔄 プルリクエスト作成中..."
@@ -161,7 +166,12 @@ fi
 
 # 変更をプッシュ
 echo "📤 変更をプッシュ中..."
-git push -u origin "$CURRENT_BRANCH"
+if git push -u origin "$CURRENT_BRANCH"; then
+    echo "✅ プッシュ成功"
+else
+    echo "❌ プッシュに失敗しました"
+    exit 1
+fi
 
 echo "🚀 プルリクエスト作成中..."
 

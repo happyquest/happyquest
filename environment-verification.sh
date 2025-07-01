@@ -120,8 +120,12 @@ verify_nodejs() {
                 
                 # Try to switch to 23.8.0
                 if nvm list | grep -q "v23.8.0"; then
-                    nvm use 23.8.0
-                    success "Node.js: Switched to $(node --version)"
+                    if nvm use 23.8.0; then
+                        success "Node.js: Switched to $(node --version)"
+                    else
+                        error "Failed to switch to Node.js v23.8.0"
+                        return 1
+                    fi
                 else
                     warning "Node.js v23.8.0 not installed"
                 fi
