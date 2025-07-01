@@ -1,5 +1,30 @@
 {
   "mcpServers": {
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "@dsazz/mcp-jira"],
+      "disabled": false,
+      "env": {
+        "JIRA_HOST": "https://happyquest.atlassian.net",
+        "JIRA_EMAIL": "nanashi7777@example.com",
+        "JIRA_API_TOKEN": "${ATLASSIAN_TOKEN}"
+      },
+      "settings": {
+        "enabledTools": [
+          "list_projects",
+          "get_project", 
+          "list_issues",
+          "get_issue",
+          "create_issue",
+          "update_issue",
+          "add_comment",
+          "search_issues"
+        ],
+        "maxConcurrentRequests": 3,
+        "requestTimeout": 240000
+      },
+      "description": "Atlassian Jira MCP Server - dsazz実装"
+    },
     "github-stable": {
       "command": "npx",
       "args": [
@@ -22,7 +47,7 @@
           "list_pull_requests"
         ],
         "maxConcurrentRequests": 3,
-        "requestTimeout": 30000
+        "requestTimeout": 240000
       },
       "description": "HappyQuest安定版GitHub MCP - 8ツール最適化"
     },
@@ -56,6 +81,7 @@
   "globalSettings": {
     "totalToolLimit": 40,
     "preferredProvider": "github-stable",
+    "defaultTimeout": 240000,
     "optimization": {
       "memoryLimit": "256MB",
       "cacheEnabled": true,

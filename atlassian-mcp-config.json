@@ -1,0 +1,139 @@
+{
+  "mcpServers": {
+    "github-stable": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "disabled": false,
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "settings": {
+        "enabledTools": [
+          "get_file_contents",
+          "list_repositories", 
+          "search_code",
+          "get_issue",
+          "create_issue",
+          "list_issues",
+          "get_pull_request",
+          "list_pull_requests"
+        ],
+        "maxConcurrentRequests": 3,
+        "requestTimeout": 240000
+      },
+      "description": "HappyQuest安定版GitHub MCP - 8ツール最適化"
+    },
+    "atlassian-mcp": {
+      "command": "docker",
+      "args": [
+        "exec", "-i", "happyquest-mcp-server",
+        "node", "/app/atlassian-mcp.js"
+      ],
+      "disabled": false,
+      "env": {
+        "CONFLUENCE_URL": "${CONFLUENCE_URL}",
+        "CONFLUENCE_USERNAME": "${CONFLUENCE_USERNAME}",
+        "CONFLUENCE_API_TOKEN": "${CONFLUENCE_API_TOKEN}",
+        "JIRA_URL": "${JIRA_URL}",
+        "JIRA_USERNAME": "${JIRA_USERNAME}",
+        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}"
+      },
+      "settings": {
+        "enabledTools": [
+          "get_confluence_spaces",
+          "get_confluence_pages",
+          "create_confluence_page",
+          "update_confluence_page",
+          "search_confluence",
+          "get_jira_projects",
+          "get_jira_issues",
+          "create_jira_issue",
+          "update_jira_issue",
+          "search_jira_issues",
+          "add_jira_comment",
+          "transition_jira_issue"
+        ],
+        "maxConcurrentRequests": 5,
+        "requestTimeout": 300000
+      },
+      "description": "Atlassian統合MCP - Jira/Confluence連携"
+    },
+    "playwright-mcp": {
+      "command": "docker",
+      "args": [
+        "exec", "-i", "happyquest-mcp-server",
+        "node", "/app/playwright-mcp.js"
+      ],
+      "disabled": false,
+      "settings": {
+        "enabledTools": [
+          "browser_navigate",
+          "browser_screenshot",
+          "browser_click",
+          "browser_type",
+          "browser_extract_text",
+          "browser_wait_for_element"
+        ],
+        "maxConcurrentRequests": 2,
+        "requestTimeout": 180000
+      },
+      "description": "Playwright自動化MCP - ブラウザ操作"
+    },
+    "time-mcp": {
+      "command": "docker",
+      "args": [
+        "exec", "-i", "happyquest-mcp-server",
+        "node", "/app/time-mcp.js"
+      ],
+      "disabled": false,
+      "settings": {
+        "enabledTools": [
+          "get_current_time",
+          "get_timezone",
+          "format_datetime",
+          "calculate_duration",
+          "schedule_reminder"
+        ],
+        "maxConcurrentRequests": 10,
+        "requestTimeout": 30000
+      },
+      "description": "時間管理MCP - 日時操作とスケジューリング"
+    },
+    "browser-docker": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--name", "happyquest-browser-mcp",
+        "-e", "DISPLAY=:0",
+        "-v", "/tmp/.X11-unix:/tmp/.X11-unix:rw",
+        "--shm-size=2gb",
+        "ghcr.io/microsoft/playwright:v1.40.0-focal"
+      ],
+      "disabled": true,
+      "settings": {
+        "enabledTools": [
+          "browser_navigate",
+          "browser_snapshot",
+          "browser_click",
+          "browser_type",
+          "browser_take_screenshot"
+        ],
+        "resourceLimits": {
+          "memory": "1GB",
+          "cpu": "1"
+        }
+      },
+      "description": "Docker化ブラウザ自動化 - サンドボックス実行 (無効)"
+    }
+  },
+  "globalSettings": {
+    "totalToolLimit": 50,
+    "preferredProvider": "atlassian-mcp",
+    "defaultTimeout": 300000,
+    "optimization": {
+      "memoryLimit": "512MB",
+      "cacheEnabled": true,
+      "compressionEnabled": true
+    }
+  }
+}

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  wsl-manager:
+    build: .
+    container_name: wsl-manager-mcp
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app
+      - /mnt/c:/mnt/c  # Windows filesystem access
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    networks:
+      - mcp-network
+    stdin_open: true
+    tty: true
+
+  ubuntu-test:
+    image: ubuntu:24.04
+    container_name: ubuntu-test-env
+    volumes:
+      - .:/workspace
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: >
+      bash -c "
+        apt update &&
+        apt install -y curl wget git python3 python3-pip nodejs npm &&
+        mkdir -p /home/nanashi7777/happyquest &&
+        echo 'Ubuntu 24.04 test environment ready' &&
+        tail -f /dev/null
+      "
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge

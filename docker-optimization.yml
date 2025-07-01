@@ -1,0 +1,41 @@
+# Docker最適化設定（元のdocker-compose.ymlに適用）
+
+# 各サービスにメモリ制限追加例：
+services:
+  happyquest-n8n:
+    deploy:
+      resources:
+        limits:
+          memory: 128M      # 168MB→128MBに制限
+        reservations:
+          memory: 64M
+    restart: "no"           # 自動再起動無効化
+
+  happyquest-postgres:
+    deploy:
+      resources:
+        limits:
+          memory: 64M       # 33MB→64MBに制限
+        reservations:
+          memory: 32M
+    environment:
+      - shared_buffers=16MB # PostgreSQL最適化
+      - effective_cache_size=32MB
+    
+  happyquest-redis:
+    deploy:
+      resources:
+        limits:
+          memory: 32M       # 10MB→32MBに制限
+        reservations:
+          memory: 16M
+    command: redis-server --maxmemory 24mb --maxmemory-policy allkeys-lru
+
+  # MCP必須サーバーは現在のまま維持
+  happyquest-mcp-server:
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
