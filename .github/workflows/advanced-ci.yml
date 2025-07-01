@@ -28,7 +28,7 @@ jobs:
           output: 'trivy-results.sarif'
           
       - name: 📤 Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
@@ -86,7 +86,7 @@ jobs:
           echo "- **Lines of code**: $(find . -name '*.js' -o -name '*.py' -o -name '*.sh' -exec wc -l {} + | tail -1 | awk '{print $1}')" >> reports/quality-report.md
           
       - name: 📤 Upload quality reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: quality-reports
           path: reports/
@@ -125,7 +125,7 @@ jobs:
           echo "- **Date**: $(date)" >> test-reports/test-report-${{ matrix.node-version }}.md
           
       - name: 📤 Upload test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-reports-node-${{ matrix.node-version }}
           path: test-reports/
@@ -164,7 +164,7 @@ jobs:
           echo "- **Build Time**: ${duration}ms" >> performance-reports/performance-report.md
           
       - name: 📤 Upload performance reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-reports
           path: performance-reports/
@@ -214,7 +214,7 @@ jobs:
           fi
           
       - name: 📤 Upload integration reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integration-reports
           path: integration-reports/
@@ -244,7 +244,7 @@ jobs:
           echo "- **Status**: ✅ Success" >> deployment-reports/staging-deployment.md
           
       - name: 📤 Upload deployment reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: staging-deployment-reports
           path: deployment-reports/
@@ -281,7 +281,7 @@ jobs:
           echo "🧪 All tests passed"
           
       - name: 📤 Upload deployment reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: production-deployment-reports
           path: deployment-reports/
