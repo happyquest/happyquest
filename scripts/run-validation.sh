@@ -13,6 +13,7 @@ NC='\033[0m'
 
 REPORT_DIR="quality-reports"
 TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+JUNIT_REPORT="$REPORT_DIR/junit-results-$TIMESTAMP.xml"
 
 log() { echo -e "${BLUE}[$(date +'%H:%M:%S')] $1${NC}"; }
 success() { echo -e "${GREEN}✅ $1${NC}"; }
@@ -42,6 +43,13 @@ run_validation_tests() {
     local fail_count=0
     
     echo "=== システム環境テスト ===" | tee -a "$REPORT_DIR/test-results-$TIMESTAMP.log"
+    
+    # JUnitレポート開始
+    cat > "$JUNIT_REPORT" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Environment Validation">
+  <testsuite name="SystemEnvironment" tests="0" failures="0" errors="0" time="0">
+EOF
     
     # OS確認
     if command -v lsb_release &> /dev/null; then
@@ -330,4 +338,34 @@ main() {
     fi
 }
 
-main "$@"
+main "$@"  </testsuite>
+</testsuites>
+
+# JUnitレポート終了処理
+generate_junit_report() {
+    local total_tests=$((pass_count + warn_count + fail_count))
+    
+    sed -i "s/tests=\"0\"/tests=\"$total_tests\"/" "$JUNIT_REPORT"
+    sed -i "s/failures=\"0\"/failures=\"$fail_count\"/" "$JUNIT_REPORT"
+    sed -i "s/errors=\"0\"/errors=\"$warn_count\"/" "$JUNIT_REPORT"
+    
+    # テスト結果を追加
+    local test_xml=""
+    if [ $pass_count -gt 0 ]; then
+        test_xml+="    <testcase name=\"System_Check\" classname=\"Environment\" time=\"1\"/>"$'\n'
+    fi
+    if [ $fail_count -gt 0 ]; then
+        test_xml+="    <testcase name=\"Failed_Check\" classname=\"Environment\" time=\"1\">"$'\n'
+        test_xml+="      <failure message=\"System validation failed\">Some checks failed</failure>"$'\n'
+        test_xml+="    </testcase>"$'\n'
+    fi
+    
+    sed -i "s|</testsuite>|$test_xml  </testsuite>|" "$JUNIT_REPORT"
+    echo "  </testsuite>" >> "$JUNIT_REPORT"
+    echo "</testsuites>" >> "$JUNIT_REPORT"
+    
+    success "JUnitレポート生成: $JUNIT_REPORT"
+}
+
+# メイン関数の最後で呼び出し
+generate_junit_report
