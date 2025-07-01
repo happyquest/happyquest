@@ -7,7 +7,7 @@
       "env": {
         "JIRA_HOST": "https://happyquest.atlassian.net",
         "JIRA_EMAIL": "nanashi7777@example.com",
-        "JIRA_API_TOKEN": "ATATT3xFfGF0NnqbL3W4YolNIQcX1jM5HXqn8YW6TIHLOF5pupiY9QZvJTJ0wPghpNNCrO6xq8OJ1UbxCqF2Shcbf-A2QboI4eSt4oNr70jYtgo_Jkz-GqEtouP7ydwXuilXWqJ3HMd69_AJgvVGPidSvxmWr98I_zRwe4WUEwKN9bNG17KpCN8=46CA7A25"
+        "JIRA_API_TOKEN": "${ATLASSIAN_TOKEN}"
       },
       "settings": {
         "enabledTools": [

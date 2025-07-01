@@ -83,9 +83,9 @@ Based on PROJECT_RULES.md, these files need to be created:
 ## Atlassian Credentials
 ### HappyQuest-CLI1 組織
 - **組織ID**: 256e25b9-b633-4bad-9b0d-25b6d8f763cd
-- **API-KEY**: ATCTT3xFfGN0FYonXFBMpf4uEv-JNJT--sjhxloL5kHHKbSDIWClff8_LcnMeZAICHuGkyB27Ar2m6P-ogGiBSfDNw-PM_bYdPj6KJizYeuu7Aebz5b4pvrOKcqrvgIb2fJRt0C7ADy_sYC-KNmurQzNuZ27bXgloyvTwf8nvfNncbIRLQPeS1g=7E1D744E
+- **API-KEY**: [環境変数 ATLASSIAN_API_KEY で設定]
 
 ### HappyQuest 個人アカウント
-- **APIトークン**: ATATT3xFfGF0NnqbL3W4YolNIQcX1jM5HXqn8YW6TIHLOF5pupiY9QZvJTJ0wPghpNNCrO6xq8OJ1UbxCqF2Shcbf-A2QboI4eSt4oNr70jYtgo_Jkz-GqEtouP7ydwXuilXWqJ3HMd69_AJgvVGPidSvxmWr98I_zRwe4WUEwKN9bNG17KpCN8=46CA7A25
+- **APIトークン**: [環境変数 ATLASSIAN_TOKEN で設定]
 - **ユーザー**: nanashi7777@example.com
 - **Jiraホスト**: https://happyquest.atlassian.net
