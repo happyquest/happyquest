@@ -1,8 +1,8 @@
 ---
 - name: pyenvをインストール
-  shell: brew install pyenv
+  shell: curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
   args:
-    creates: /home/linuxbrew/.linuxbrew/bin/pyenv
+    creates: "{{ ansible_env.HOME }}/.pyenv"
 
 - name: pyenvの環境変数を設定
   blockinfile:
@@ -28,6 +28,6 @@
     creates: "{{ ansible_env.HOME }}/.pyenv/versions/3.12.9"
 
 - name: uvをインストール
-  shell: brew install uv
+  shell: curl -LsSf https://astral.sh/uv/install.sh | sh
   args:
-    creates: /home/linuxbrew/.linuxbrew/bin/uv 
+    creates: "{{ ansible_env.HOME }}/.local/bin/uv" 

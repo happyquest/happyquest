@@ -26,15 +26,18 @@
       - python3-venv
     state: present
 
-- name: Homebrewをインストール
+- name: GitHub CLI公式リポジトリを追加
   shell: |
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
   args:
-    creates: /home/linuxbrew/.linuxbrew/bin/brew
+    creates: /etc/apt/sources.list.d/github-cli.list
+
+- name: パッケージリストを更新
+  apt:
+    update_cache: yes
 
 - name: GitHub CLIをインストール
-  shell: brew install gh
-  args:
-    creates: /home/linuxbrew/.linuxbrew/bin/gh 
+  apt:
+    name: gh
+    state: present 

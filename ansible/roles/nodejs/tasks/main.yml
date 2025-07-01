@@ -1,8 +1,8 @@
 ---
 - name: nvmをインストール
-  shell: brew install nvm
+  shell: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
   args:
-    creates: /home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh
+    creates: "{{ ansible_env.HOME }}/.nvm"
 
 - name: nvmディレクトリを作成
   file:
@@ -15,8 +15,8 @@
     path: "{{ ansible_env.HOME }}/.bashrc"
     block: |
       export NVM_DIR="$HOME/.nvm"
-      [ -s "/home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh" ] && \. "/home/linuxbrew/.linuxbrew/opt/nvm/nvm.sh"
-      [ -s "/home/linuxbrew/.linuxbrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/home/linuxbrew/.linuxbrew/opt/nvm/etc/bash_completion.d/nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
     create: yes
 
 - name: Node.jsをインストール

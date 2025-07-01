@@ -262,9 +262,9 @@ function Start-Setup {
         Write-Log "=== フェーズ 3: 環境設定 ===" "WARN"
         $paths = Setup-Environment
         
-        # 4. Ansible実行
+        # 4. Windows 11対応環境構築実行
         Write-Log "=== フェーズ 4: 開発環境構築 ===" "WARN"
-        $setupSuccess = Invoke-AnsibleSetup -Paths $paths
+        $setupSuccess = Invoke-CompatibleSetup -Paths $paths
         
         if (-not $setupSuccess) {
             Write-Log "環境構築で問題が発生しました。手動確認が必要です。" "ERROR"

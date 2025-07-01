@@ -1,0 +1,73 @@
+FROM ubuntu:24.04
+
+# 基本パッケージインストール
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    curl \
+    wget \
+    git \
+    python3 \
+    python3-pip \
+    python3-venv \
+    nodejs \
+    npm \
+    build-essential \
+    software-properties-common \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# pyenv環境設定用
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    make \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    llvm \
+    libncurses5-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libffi-dev \
+    liblzma-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリ作成
+WORKDIR /workspace
+RUN mkdir -p /home/nanashi7777/happyquest
+
+# ユーザー作成
+RUN useradd -m -s /bin/bash nanashi7777 && \
+    echo 'nanashi7777:password' | chpasswd && \
+    usermod -aG sudo nanashi7777
+
+# 環境確認スクリプト
+RUN echo '#!/bin/bash\n\
+echo "🧪 HappyQuest Ubuntu24.04 環境構築テスト"\n\
+echo "===================================="\n\
+echo "📋 基本情報:"\n\
+echo "  OS: $(cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2)"\n\
+echo "  Kernel: $(uname -r)"\n\
+echo "  Architecture: $(uname -m)"\n\
+echo ""\n\
+echo "🐍 Python環境:"\n\
+python3 --version || echo "  Python3: 未インストール"\n\
+pip3 --version || echo "  pip3: 未インストール"\n\
+echo ""\n\
+echo "📦 Node.js環境:"\n\
+node --version || echo "  Node.js: 未インストール"\n\
+npm --version || echo "  npm: 未インストール"\n\
+echo ""\n\
+echo "🔧 開発ツール:"\n\
+git --version || echo "  Git: 未インストール"\n\
+curl --version | head -1 || echo "  Curl: 未インストール"\n\
+wget --version | head -1 || echo "  Wget: 未インストール"\n\
+echo ""\n\
+echo "✅ 環境構築テスト完了"' > /usr/local/bin/test-environment.sh && \
+    chmod +x /usr/local/bin/test-environment.sh
+
+CMD ["bash"]
