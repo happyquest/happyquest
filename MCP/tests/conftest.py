@@ -1,7 +1,7 @@
 import pytest
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
-from langchain_community.chat_models import ChatOpenAI
+# from langchain_community.chat_models import ChatOpenAI
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo.results import InsertOneResult, UpdateResult, DeleteResult
 

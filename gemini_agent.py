@@ -1,6 +1,7 @@
 import json
 import datetime
 import os
+import requests
 import google.generativeai as genai
 import textwrap # for dedenting prompts
 import subprocess # For execute_command simulation
@@ -8,10 +9,8 @@ import subprocess # For execute_command simulation
 LOG_FILE = "gemini_agent_log.txt"
 # --- Gemini API Key Configuration ---
 API_KEY = os.getenv("GOOGLE_API_KEY")
-if not API_KEY:
-    raise ValueError("エラー: 環境変数 GOOGLE_API_KEY が設定されていません。")
 
-genai.configure(api_key=API_KEY)
+# genai.configure(api_key=API_KEY) # Moved to call_gemini function
 
 # --- Available Tools Definition (Simulated Cline Tools) ---
 AVAILABLE_TOOLS = [
@@ -49,7 +48,17 @@ AVAILABLE_TOOLS = [
             "required": ["command"]
         }
     },
-    # 必要に応じて他のClineツールを追加 (例: search_files)
+    {
+        "name": "list_files",
+        "description": "指定されたディレクトリ内のファイルとサブディレクトリのリストを返す。",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "リストするディレクトリのパス"}
+            },
+            "required": ["path"]
+        }
+    }
 ]
 
 # --- System Prompts ---
@@ -59,7 +68,7 @@ PLANNER_PROMPT = textwrap.dedent("""
 **制約:**
 - 利用可能なツールのみを使用してください。
 - 各ステップは、単一のツール呼び出しに対応する必要があります。
-- ステップ間の依存関係を考慮してください。前のステップの出力が必要な場合は、`args` 内で `{ステップID}_output` の形式で参照してください。 (例: `"content": "{step_1_output}"`)
+- ステップ間の依存関係を考慮してください。前のステップの出力が必要な場合は、`args` 内で `{ステップID}_output` の形式で参照してください。 (例: `"content": "{step_1_output}"}`)
 - 出力は必ず以下のJSON形式に従ってください。他のテキストは含めないでください。
 
 **利用可能なツール:**
@@ -80,7 +89,6 @@ PLANNER_PROMPT = textwrap.dedent("""
   }},
   ...
 ]
-```
 """)
 
 IMPROVER_PROMPT = textwrap.dedent("""
@@ -133,48 +141,74 @@ def log_message(message):
 
 def call_gemini(prompt: str, model_name="gemini-1.5-pro-latest") -> str:
     """Gemini APIを呼び出して応答を取得する"""
+    current_api_key = os.getenv("GOOGLE_API_KEY")
+    if not current_api_key and os.getenv("TESTING") != "true":
+        return "Error: 環境変数 GOOGLE_API_KEY が設定されていません。"
+    
+    if current_api_key:
+        genai.configure(api_key=current_api_key)
+
     log_message(f"Calling Gemini API (Model: {model_name})...")
+    
+    # Log to Fluentd
+    log_data = {
+        "event": "gemini_api_call",
+        "model": model_name,
+        "prompt": prompt,
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+    
+    result_text = ""
     try:
         model = genai.GenerativeModel(model_name)
-        # Note: Consider adding safety_settings if needed
         response = model.generate_content(prompt)
 
-        # Handle potential lack of 'text' attribute or empty candidates
         if hasattr(response, 'text') and response.text:
+            result_text = response.text
             log_message("Gemini API call successful.")
-            return response.text
         elif response.candidates:
-             # Check the first candidate
              candidate = response.candidates[0]
              if candidate.content and candidate.content.parts:
+                 result_text = candidate.content.parts[0].text
                  log_message("Gemini API call successful (using candidate).")
-                 return candidate.content.parts[0].text
              else:
-                 # Check finish reason if content is empty
                  finish_reason = candidate.finish_reason.name if hasattr(candidate, 'finish_reason') and candidate.finish_reason else "UNKNOWN"
-                 log_message(f"Gemini API response candidate had no parts. Finish Reason: {finish_reason}")
-                 # Check safety ratings
                  safety_ratings = candidate.safety_ratings if hasattr(candidate, 'safety_ratings') else []
                  safety_issues = [f"{r.category.name}: {r.probability.name}" for r in safety_ratings if hasattr(r, 'probability') and r.probability.name != "NEGLIGIBLE"]
                  if safety_issues:
                      safety_msg = ", ".join(safety_issues)
-                     log_message(f"Safety issues detected: {safety_msg}")
-                     return f"Error: Content blocked by safety settings ({safety_msg})"
-                 return f"Error: No text content in Gemini response candidate (Finish Reason: {finish_reason})."
+                     result_text = f"Error: Content blocked by safety settings ({safety_msg})"
+                 else:
+                    result_text = f"Error: No text content in Gemini response candidate (Finish Reason: {finish_reason})."
+                 log_message(result_text)
         else:
-            # Handle cases where prompt feedback indicates blocking
             if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
                  block_reason = response.prompt_feedback.block_reason.name if hasattr(response.prompt_feedback.block_reason, 'name') else "UNKNOWN"
-                 log_message(f"Content blocked due to: {block_reason}")
-                 return f"Error: Content blocked by safety settings ({block_reason})"
-            # General unknown error
-            log_message("Gemini API response did not contain text or candidates.")
-            log_message(f"Full Gemini Response: {response}") # Log the full response for debugging
-            return "Error: Unknown issue with Gemini response."
+                 result_text = f"Error: Content blocked by safety settings ({block_reason})"
+            else:
+                result_text = "Error: Unknown issue with Gemini response."
+            log_message(result_text)
+            log_message(f"Full Gemini Response: {response}")
+
+        log_data["response"] = result_text
+        # In a real scenario, you would get token count from the response if available
+        # log_data["token_usage"] = {"prompt_tokens": ..., "response_tokens": ...}
+        
+        return result_text
 
     except Exception as e:
-        log_message(f"Error calling Gemini API: {type(e).__name__}: {e}")
-        return f"Error: {type(e).__name__}: {e}"
+        error_message = f"Error: {type(e).__name__}: {e}"
+        log_message(f"Error calling Gemini API: {error_message}")
+        log_data["error"] = error_message
+        return error_message
+    finally:
+        try:
+            # Assuming fluentd is running on localhost and mapped to port 8888
+            # In a containerized setup, this would be 'http://fluentd:8888/gemini.log'
+            fluentd_url = "http://localhost:8888/gemini.log" 
+            requests.post(fluentd_url, data=json.dumps(log_data))
+        except requests.exceptions.RequestException as e:
+            log_message(f"Failed to log to Fluentd: {e}")
 
 
 def parse_json_from_gemini(response_text: str) -> list | dict | None:
@@ -300,4 +334,69 @@ def execute(steps: list) -> list:
                 content = resolved_args.get("content")
                 if path is not None and content is not None:
                     content_str = str(content) # Ensure content is string
-                    log_message(f"[SIMULATE] Would call Cline: <write_to_file><path>{path}</path><content>...
+                    log_message(f"[SIMULATE] Would call Cline: <write_to_file><path>{path}</path><content>... (content omitted)")
+                    output_from_tool = f"Successfully wrote to {path}"
+                else:
+                    raise ValueError("Missing 'path' or 'content' for write_to_file.")
+
+            elif tool_name == "execute_command":
+                command = resolved_args.get("command")
+                if command is not None:
+                    log_message(f"[SIMULATE] Would execute command: {command}")
+                    # 実際のコマンド実行をシミュレート
+                    try:
+                        result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
+                        output_from_tool = {"stdout": result.stdout, "stderr": result.stderr}
+                        log_message(f"Command stdout: {result.stdout}")
+                        if result.stderr:
+                            log_message(f"Command stderr: {result.stderr}")
+                    except subprocess.CalledProcessError as e:
+                        output_from_tool = {"stdout": e.stdout, "stderr": e.stderr, "error": str(e)}
+                        log_message(f"Command failed with error: {e}")
+                        log_message(f"Command stdout: {e.stdout}")
+                        log_message(f"Command stderr: {e.stderr}")
+                        raise # エラーを再スローして外側のtry-exceptで捕捉
+                else:
+                    raise ValueError("Missing 'command' for execute_command.")
+
+            elif tool_name == "read_file":
+                path = resolved_args.get("path")
+                if path is not None:
+                    log_message(f"[SIMULATE] Would read file: {path}")
+                    try:
+                        with open(path, 'r', encoding='utf-8') as f:
+                            output_from_tool = f.read()
+                    except FileNotFoundError:
+                        raise FileNotFoundError(f"File not found: {path}")
+                    except Exception as e:
+                        raise Exception(f"Error reading file {path}: {e}")
+                else:
+                    raise ValueError("Missing 'path' for read_file.")
+
+            elif tool_name == "list_files":
+                path = resolved_args.get("path")
+                if path is not None:
+                    log_message(f"[SIMULATE] Would list files in: {path}")
+                    try:
+                        output_from_tool = os.listdir(path)
+                    except FileNotFoundError:
+                        raise FileNotFoundError(f"Directory not found: {path}")
+                    except Exception as e:
+                        raise Exception(f"Error listing files in {path}: {e}")
+                else:
+                    raise ValueError("Missing 'path' for list_files.")
+
+            # --- End Cline Tool Execution Simulation ---
+
+            step_result.update({"status": "success", "output": output_from_tool})
+            memory[step_id] = output_from_tool
+
+        except Exception as e:
+            log_message(f"Error executing step {step_id}: {e}")
+            step_result.update({"status": "failed", "error": str(e)})
+            memory[step_id] = None # 失敗したステップの出力はNoneとする
+
+        results.append(step_result)
+
+    log_message("--- Plan Execution Finished ---")
+    return results
