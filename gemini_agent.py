@@ -206,7 +206,9 @@ def call_gemini(prompt: str, model_name="gemini-1.5-pro-latest") -> str:
             # Assuming fluentd is running on localhost and mapped to port 8888
             # In a containerized setup, this would be 'http://fluentd:8888/gemini.log'
             fluentd_url = "http://localhost:8888/gemini.log" 
-            requests.post(fluentd_url, data=json.dumps(log_data))
+            requests.post(fluentd_url, data=json.dumps(log_data), 
+                         headers={'Content-Type': 'application/json'}, 
+                         timeout=5)
         except requests.exceptions.RequestException as e:
             log_message(f"Failed to log to Fluentd: {e}")
 
@@ -378,6 +380,8 @@ def execute(steps: list) -> list:
                 if path is not None:
                     log_message(f"[SIMULATE] Would list files in: {path}")
                     try:
+                        if not os.path.isdir(path):
+                            raise ValueError(f"Path is not a directory: {path}")
                         output_from_tool = os.listdir(path)
                     except FileNotFoundError:
                         raise FileNotFoundError(f"Directory not found: {path}")

@@ -1,34 +1,12 @@
-<<<<<<< HEAD
 # HappyQuest Development Project
 
 ## 概要
-AI開発プロジェクトのための統合開発環境
+AI開発プロジェクトのための統合開発環境構築システム
 
 ## ユーザー情報
 - **ユーザー**: nanashi7777
 - **プロジェクトディレクトリ**: /home/nanashi7777/happyquest
-- **作成日時**: 2025年06月06日 16:46:52
-
-## セットアップ
-```bash
-cd /home/nanashi7777/happyquest
-make install
-make test
-```
-
-## 環境情報
-- Ubuntu 24.04 WSL2
-- ユーザー: nanashi7777
-
-## 次のステップ
-1. 開発ツールのインストール
-2. Python環境のセットアップ
-3. Node.js環境のセットアップ
-4. HashiCorp Vault設定
-=======
-# HappyQuest 開発環境構築
-
-Ubuntu 24.04向けの開発環境自動構築スクリプト
+- **環境**: Ubuntu 24.04 WSL2
 
 ## 機能
 
@@ -36,6 +14,7 @@ Ubuntu 24.04向けの開発環境自動構築スクリプト
 - Node.js開発環境の構築
 - Docker環境の構築
 - 開発ツール（Git, GitHub CLI等）のインストール
+- MCP（Model Context Protocol）ツールチェーン統合
 
 ## 必要条件
 
@@ -59,6 +38,14 @@ cd ansible
 ansible-playbook site.yml
 ```
 
+## 開発セットアップ
+
+```bash
+cd /home/nanashi7777/happyquest
+make install
+make test
+```
+
 ## 構成
 
 ```
@@ -71,13 +58,16 @@ happyquest/
 │   └── site.yml      # メインプレイブック
 ├── docs/
 │   └── environment/   # ドキュメント
-└── scripts/          # ユーティリティスクリプト
+├── scripts/          # ユーティリティスクリプト
+├── MCP/             # MCP関連ツール
+└── tests/           # テストファイル
 ```
 
 ## 開発者向け情報
 
 - 環境構築の詳細は `docs/environment/setup.md` を参照
 - トラブルシューティングは `docs/environment/troubleshooting.md` を参照
+- プロジェクトルールは `PROJECT_RULES.md` を確認
 
 ## ライセンス
 
@@ -89,5 +79,4 @@ MIT License
 2. 新しいブランチを作成 (`git checkout -b feature/amazing-feature`)
 3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
 4. ブランチをプッシュ (`git push origin feature/amazing-feature`)
-5. Pull Requestを作成 
->>>>>>> bb05e5765379a7e8f7b29286bb7e9490ae033ac9
+5. Pull Requestを作成

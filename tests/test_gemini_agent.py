@@ -16,10 +16,12 @@ def set_env_vars(monkeypatch):
 
 class TestGeminiAgent(unittest.TestCase):
 
+    @patch('os.path.isdir')
     @patch('os.listdir')
-    def test_execute_list_files_tool(self, mock_listdir):
+    def test_execute_list_files_tool(self, mock_listdir, mock_isdir):
         """list_filesツールが正しく実行されるかテストする"""
-        # Arrange: os.listdirがダミーのファイルリストを返すように設定
+        # Arrange: os.path.isdirがTrueを返し、os.listdirがダミーのファイルリストを返すように設定
+        mock_isdir.return_value = True
         mock_listdir.return_value = ['file1.txt', 'file2.log']
         plan = [
             {
@@ -41,6 +43,7 @@ class TestGeminiAgent(unittest.TestCase):
         self.assertIsNone(result['error'])
         self.assertFalse(result['skipped'])
         self.assertEqual(result['output'], ['file1.txt', 'file2.log'])
+        mock_isdir.assert_called_once_with("/fake/dir")
         mock_listdir.assert_called_once_with("/fake/dir")
 
 if __name__ == '__main__':
